@@ -1,0 +1,8 @@
+uploads/
+output/
+logs/
+data/rules.json
+data/rules-history.json
+.env
+.env.*
+~$*

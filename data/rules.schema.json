@@ -1,0 +1,743 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "updatedAt",
+    "page",
+    "redHeader",
+    "documentNo",
+    "title",
+    "body",
+    "mainRecipient",
+    "attachment",
+    "signature",
+    "imprint",
+    "pageNumber",
+    "cleanup"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "maxLength": 500,
+      "minLength": 1
+    },
+    "updatedAt": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "size",
+        "topMarginMm",
+        "bottomMarginMm",
+        "leftMarginMm",
+        "rightMarginMm"
+      ],
+      "properties": {
+        "size": {
+          "type": "string",
+          "maxLength": 500,
+          "enum": [
+            "A4"
+          ]
+        },
+        "topMarginMm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "bottomMarginMm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "leftMarginMm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "rightMarginMm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "redHeader": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "font",
+        "sizePt",
+        "color",
+        "scalePercent",
+        "characterSpacingPt",
+        "topFromContentTopMm",
+        "topSpacerPt",
+        "visibleTopInsetPt",
+        "docNoBlankLines",
+        "spaceAfterPt"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "font": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "sizePt": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 120
+        },
+        "color": {
+          "type": "string",
+          "maxLength": 500,
+          "pattern": "^[0-9A-Fa-f]{6}$"
+        },
+        "scalePercent": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 200
+        },
+        "characterSpacingPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "topFromContentTopMm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "topSpacerPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "visibleTopInsetPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "docNoBlankLines": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "spaceAfterPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        }
+      }
+    },
+    "documentNo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "defaultText",
+        "font",
+        "sizePt",
+        "signerLabel",
+        "signerFont",
+        "leftBlankChars",
+        "signerRightBlankChars",
+        "redLineColor",
+        "redLineLengthMm",
+        "redLineWidthPt",
+        "redLineOffsetMm",
+        "redLineLineBoxHeightPt",
+        "spaceAfterPt"
+      ],
+      "properties": {
+        "defaultText": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "font": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "sizePt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "signerLabel": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "signerFont": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "leftBlankChars": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "signerRightBlankChars": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "redLineColor": {
+          "type": "string",
+          "maxLength": 500,
+          "pattern": "^[0-9A-Fa-f]{6}$"
+        },
+        "redLineLengthMm": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 210
+        },
+        "redLineWidthPt": {
+          "type": "number",
+          "minimum": 0.25,
+          "maximum": 6
+        },
+        "redLineOffsetMm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "redLineLineBoxHeightPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "spaceAfterPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        }
+      }
+    },
+    "title": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "font",
+        "sizePt",
+        "color",
+        "lineSpacingPt",
+        "maxLineChars",
+        "topBlankLines",
+        "spaceAfterPt"
+      ],
+      "properties": {
+        "font": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "sizePt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "color": {
+          "type": "string",
+          "maxLength": 500,
+          "pattern": "^[0-9A-Fa-f]{6}$"
+        },
+        "lineSpacingPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "maxLineChars": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 80
+        },
+        "topBlankLines": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "spaceAfterPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        }
+      }
+    },
+    "body": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "font",
+        "latinFont",
+        "sizePt",
+        "color",
+        "lineSpacingPt",
+        "firstLineIndentPt"
+      ],
+      "properties": {
+        "font": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "latinFont": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "sizePt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "color": {
+          "type": "string",
+          "maxLength": 500,
+          "pattern": "^[0-9A-Fa-f]{6}$"
+        },
+        "lineSpacingPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "firstLineIndentPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        }
+      }
+    },
+    "mainRecipient": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "font",
+        "sizePt",
+        "lineSpacingPt",
+        "titleSpaceAfterPt"
+      ],
+      "properties": {
+        "font": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "sizePt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "lineSpacingPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "titleSpaceAfterPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        }
+      }
+    },
+    "attachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "font",
+        "sizePt",
+        "lineSpacingPt",
+        "leftBlankChars",
+        "spaceBeforeLines"
+      ],
+      "properties": {
+        "font": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "sizePt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "lineSpacingPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "leftBlankChars": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "spaceBeforeLines": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "company",
+        "date",
+        "noSeal",
+        "dateRightIndentChars",
+        "companyCenterCorrectionPt",
+        "companyLeftIndentPt",
+        "dateLeftIndentPt",
+        "seal"
+      ],
+      "properties": {
+        "company": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "noSeal": {
+          "type": "boolean"
+        },
+        "dateRightIndentChars": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "companyCenterCorrectionPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "companyLeftIndentPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "dateLeftIndentPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "seal": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "imagePath",
+            "widthMm",
+            "heightMm",
+            "verticalOffsetPt"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "imagePath": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "widthMm": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "heightMm": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "verticalOffsetPt": {
+              "type": "number",
+              "minimum": -10000,
+              "maximum": 10000
+            }
+          }
+        }
+      }
+    },
+    "imprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "office",
+        "date",
+        "font",
+        "sizePt",
+        "lineSpacingPt",
+        "rowHeightPt",
+        "baselineShiftPt",
+        "cellPaddingTopPt",
+        "cellPaddingBottomPt",
+        "outerLineWidthPt",
+        "innerLineWidthPt",
+        "officeLeftChars",
+        "dateRightChars",
+        "mainRecipient",
+        "cc",
+        "samePageWhenPossible",
+        "requireEvenPage"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "office": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "font": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "sizePt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "lineSpacingPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "rowHeightPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "baselineShiftPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "cellPaddingTopPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "cellPaddingBottomPt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "outerLineWidthPt": {
+          "type": "number",
+          "minimum": 0.25,
+          "maximum": 6
+        },
+        "innerLineWidthPt": {
+          "type": "number",
+          "minimum": 0.25,
+          "maximum": 6
+        },
+        "officeLeftChars": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "dateRightChars": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "mainRecipient": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "label",
+            "text",
+            "leftBlankChars",
+            "rightBlankChars"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "label": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "leftBlankChars": {
+              "type": "number",
+              "minimum": -10000,
+              "maximum": 10000
+            },
+            "rightBlankChars": {
+              "type": "number",
+              "minimum": -10000,
+              "maximum": 10000
+            }
+          }
+        },
+        "cc": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "label",
+            "text",
+            "leftBlankChars",
+            "rightBlankChars"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "label": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "leftBlankChars": {
+              "type": "number",
+              "minimum": -10000,
+              "maximum": 10000
+            },
+            "rightBlankChars": {
+              "type": "number",
+              "minimum": -10000,
+              "maximum": 10000
+            }
+          }
+        },
+        "samePageWhenPossible": {
+          "type": "boolean"
+        },
+        "requireEvenPage": {
+          "type": "boolean"
+        }
+      }
+    },
+    "pageNumber": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "font",
+        "sizePt",
+        "format",
+        "oddAlign",
+        "evenAlign",
+        "blankChars",
+        "distanceBelowContentMm"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "font": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "sizePt": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "format": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "oddAlign": {
+          "type": "string",
+          "maxLength": 500,
+          "enum": [
+            "left",
+            "center",
+            "right",
+            "左",
+            "居左",
+            "居中",
+            "右",
+            "居右"
+          ]
+        },
+        "evenAlign": {
+          "type": "string",
+          "maxLength": 500,
+          "enum": [
+            "left",
+            "center",
+            "right",
+            "左",
+            "居左",
+            "居中",
+            "右",
+            "居右"
+          ]
+        },
+        "blankChars": {
+          "type": "number",
+          "minimum": -10000,
+          "maximum": 10000
+        },
+        "distanceBelowContentMm": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 50
+        }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixDoubleAnmeng",
+        "convertDocToDocx",
+        "removeExistingHeadersFooters",
+        "trimTrailingBlankPages"
+      ],
+      "properties": {
+        "fixDoubleAnmeng": {
+          "type": "boolean"
+        },
+        "convertDocToDocx": {
+          "type": "boolean"
+        },
+        "removeExistingHeadersFooters": {
+          "type": "boolean"
+        },
+        "trimTrailingBlankPages": {
+          "type": "boolean"
+        }
+      }
+    },
+    "ruleId": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "revisionId": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "restoredFrom": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 200
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "公文套红规则 Schema",
+  "description": "用于校验规则工作台保存的套红规则。系统元数据为可选字段，业务规则字段必填。"
+}

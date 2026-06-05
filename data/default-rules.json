@@ -1,0 +1,133 @@
+{
+  "version": "安盟套红规则 v1",
+  "updatedAt": "2026-06-03",
+  "page": {
+    "size": "A4",
+    "topMarginMm": 37,
+    "bottomMarginMm": 35,
+    "leftMarginMm": 28,
+    "rightMarginMm": 26
+  },
+  "redHeader": {
+    "text": "安盟财产保险有限公司文件",
+    "font": "方正小标宋简体",
+    "sizePt": 58,
+    "color": "FF0000",
+    "scalePercent": 64,
+    "characterSpacingPt": -0.5,
+    "topFromContentTopMm": 35,
+    "topSpacerPt": 57.4,
+    "visibleTopInsetPt": 8.8,
+    "docNoBlankLines": 2,
+    "spaceAfterPt": 32
+  },
+  "documentNo": {
+    "defaultText": "安盟保险〔2026〕142号",
+    "font": "仿宋_GB2312",
+    "sizePt": 16,
+    "signerLabel": "签发人：",
+    "signerFont": "楷体_GB2312",
+    "leftBlankChars": 1,
+    "signerRightBlankChars": 1,
+    "redLineColor": "FF0000",
+    "redLineLengthMm": 156,
+    "redLineWidthPt": 2.25,
+    "redLineOffsetMm": 4,
+    "redLineLineBoxHeightPt": 28,
+    "spaceAfterPt": 40
+  },
+  "title": {
+    "font": "方正小标宋简体",
+    "sizePt": 22,
+    "color": "000000",
+    "lineSpacingPt": 32,
+    "maxLineChars": 22,
+    "topBlankLines": 2,
+    "spaceAfterPt": 22
+  },
+  "body": {
+    "font": "仿宋_GB2312",
+    "latinFont": "Times New Roman",
+    "sizePt": 16,
+    "color": "000000",
+    "lineSpacingPt": 28,
+    "firstLineIndentPt": 32
+  },
+  "mainRecipient": {
+    "font": "仿宋_GB2312",
+    "sizePt": 16,
+    "lineSpacingPt": 28,
+    "titleSpaceAfterPt": 22
+  },
+  "attachment": {
+    "font": "仿宋_GB2312",
+    "sizePt": 16,
+    "lineSpacingPt": 28,
+    "leftBlankChars": 2,
+    "spaceBeforeLines": 1
+  },
+  "signature": {
+    "company": "安盟财产保险有限公司",
+    "date": "2026年5月9日",
+    "noSeal": false,
+    "dateRightIndentChars": 4,
+    "companyCenterCorrectionPt": 3,
+    "companyLeftIndentPt": 250.2,
+    "dateLeftIndentPt": 282.2,
+    "seal": {
+      "enabled": true,
+      "imagePath": "",
+      "widthMm": 42,
+      "heightMm": 42,
+      "verticalOffsetPt": -34
+    }
+  },
+  "imprint": {
+    "enabled": true,
+    "office": "安盟财产保险有限公司综合办公室",
+    "date": "2026年5月9日印发",
+    "font": "仿宋_GB2312",
+    "sizePt": 14,
+    "lineSpacingPt": 28,
+    "rowHeightPt": 28,
+    "baselineShiftPt": 3,
+    "cellPaddingTopPt": 0,
+    "cellPaddingBottomPt": 0,
+    "outerLineWidthPt": 1,
+    "innerLineWidthPt": 0.75,
+    "officeLeftChars": 1,
+    "dateRightChars": 1,
+    "mainRecipient": {
+      "enabled": false,
+      "label": "主送：",
+      "text": "",
+      "leftBlankChars": 1,
+      "rightBlankChars": 1
+    },
+    "cc": {
+      "enabled": false,
+      "label": "抄送：",
+      "text": "",
+      "leftBlankChars": 1,
+      "rightBlankChars": 1
+    },
+    "samePageWhenPossible": true,
+    "requireEvenPage": true
+  },
+  "pageNumber": {
+    "enabled": true,
+    "font": "宋体",
+    "sizePt": 14,
+    "format": "- {page} -",
+    "oddAlign": "right",
+    "evenAlign": "left",
+    "blankChars": 1,
+    "distanceBelowContentMm": 7
+  },
+  "cleanup": {
+    "fixDoubleAnmeng": true,
+    "convertDocToDocx": true,
+    "removeExistingHeadersFooters": true,
+    "trimTrailingBlankPages": true
+  }
+}

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>公文套红工作台</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>公文套红工作台</h1>
+          <p id="ruleStamp">规则加载中</p>
+        </div>
+        <div class="top-actions">
+          <button class="ghost" id="reloadRulesBtn" type="button" title="重新加载规则">刷新</button>
+          <button class="primary" id="saveRulesTopBtn" type="button">保存规则</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="side-panel">
+          <nav class="tabs" aria-label="工作区">
+            <button class="tab active" data-tab="process" type="button">处理</button>
+            <button class="tab" data-tab="rules" type="button">规则</button>
+            <button class="tab" data-tab="history" type="button">记录</button>
+          </nav>
+
+          <section class="tab-pane active" id="pane-process">
+            <form id="processForm" class="stack">
+              <label class="file-drop" for="wordFile">
+                <input id="wordFile" name="file" type="file" accept=".doc,.docx" />
+                <span id="fileName">选择 Word 文件</span>
+              </label>
+
+              <div class="field-grid">
+                <label>
+                  <span>发文字号</span>
+                  <input id="documentNo" type="text" autocomplete="off" />
+                </label>
+                <label>
+                  <span>签发人</span>
+                  <input id="signer" type="text" autocomplete="off" />
+                </label>
+                <label>
+                  <span>落款单位</span>
+                  <input id="company" type="text" autocomplete="off" />
+                </label>
+                <label>
+                  <span>成文日期</span>
+                  <input id="date" type="text" autocomplete="off" />
+                </label>
+              </div>
+
+              <label class="check-row">
+                <input id="replaceTitle" type="checkbox" />
+                <span>覆盖原文标题</span>
+              </label>
+
+              <label>
+                <span>标题</span>
+                <textarea id="titleOverride" rows="4" placeholder="需要覆盖时填写"></textarea>
+              </label>
+
+              <button class="primary wide" id="processBtn" type="submit">开始套红并预览</button>
+            </form>
+          </section>
+
+          <section class="tab-pane" id="pane-rules">
+            <div class="rule-section">
+              <h2>规则版本</h2>
+              <label><span>规则名称</span><input data-rule="version" type="text" /></label>
+              <label>
+                <span>历史版本</span>
+                <select id="ruleVersionSelect"></select>
+              </label>
+              <div class="rule-actions">
+                <button class="ghost" id="restoreRuleBtn" type="button">回滚到所选版本</button>
+                <button class="ghost" id="refreshVersionsBtn" type="button">刷新版本</button>
+              </div>
+            </div>
+
+            <div class="rule-section">
+              <h2>页面</h2>
+              <div class="rule-grid">
+                <label>
+                  <span>纸张规格</span>
+                  <select data-rule="page.size">
+                    <option value="A4">A4</option>
+                  </select>
+                </label>
+                <label><span>上边距 mm</span><input data-rule="page.topMarginMm" type="number" step="0.1" /></label>
+                <label><span>下边距 mm</span><input data-rule="page.bottomMarginMm" type="number" step="0.1" /></label>
+                <label><span>左边距 mm</span><input data-rule="page.leftMarginMm" type="number" step="0.1" /></label>
+                <label><span>右边距 mm</span><input data-rule="page.rightMarginMm" type="number" step="0.1" /></label>
+              </div>
+            </div>
+
+            <div class="rule-section">
+              <h2>版头</h2>
+              <label><span>红头文字</span><input data-rule="redHeader.text" type="text" /></label>
+              <div class="rule-grid">
+                <label><span>字体</span><input data-rule="redHeader.font" type="text" /></label>
+                <label><span>字号 pt</span><input data-rule="redHeader.sizePt" type="number" step="0.5" /></label>
+                <label><span>颜色 HEX</span><input data-rule="redHeader.color" type="text" /></label>
+                <label><span>缩放 %</span><input data-rule="redHeader.scalePercent" type="number" step="1" /></label>
+                <label><span>字距 pt</span><input data-rule="redHeader.characterSpacingPt" type="number" step="0.1" /></label>
+                <label><span>距版心上缘 mm</span><input data-rule="redHeader.topFromContentTopMm" type="number" step="0.1" /></label>
+                <label><span>红头定位段 pt</span><input data-rule="redHeader.topSpacerPt" type="number" step="0.1" /></label>
+                <label><span>可视上缘补偿 pt</span><input data-rule="redHeader.visibleTopInsetPt" type="number" step="0.1" /></label>
+                <label><span>红头后空行数</span><input data-rule="redHeader.docNoBlankLines" type="number" step="0.5" /></label>
+                <label><span>红头后距 pt</span><input data-rule="redHeader.spaceAfterPt" type="number" step="0.5" /></label>
+              </div>
+              <label><span>默认发文字号</span><input data-rule="documentNo.defaultText" type="text" /></label>
+              <div class="rule-grid">
+                <label><span>发文字号字体</span><input data-rule="documentNo.font" type="text" /></label>
+                <label><span>发文字号字号 pt</span><input data-rule="documentNo.sizePt" type="number" step="0.5" /></label>
+                <label><span>签发人标签</span><input data-rule="documentNo.signerLabel" type="text" /></label>
+                <label><span>发文字号左空字数</span><input data-rule="documentNo.leftBlankChars" type="number" step="1" /></label>
+                <label><span>签发人右空字数</span><input data-rule="documentNo.signerRightBlankChars" type="number" step="1" /></label>
+                <label><span>签发人姓名字体</span><input data-rule="documentNo.signerFont" type="text" /></label>
+                <label><span>红线颜色 HEX</span><input data-rule="documentNo.redLineColor" type="text" /></label>
+                <label><span>红线长度 mm</span><input data-rule="documentNo.redLineLengthMm" type="number" step="0.1" /></label>
+                <label><span>红线线宽 pt</span><input data-rule="documentNo.redLineWidthPt" type="number" step="0.25" /></label>
+                <label><span>红线下移 mm</span><input data-rule="documentNo.redLineOffsetMm" type="number" step="0.1" /></label>
+                <label><span>发文字号行盒 pt</span><input data-rule="documentNo.redLineLineBoxHeightPt" type="number" step="0.5" /></label>
+                <label><span>发文字号段后 pt</span><input data-rule="documentNo.spaceAfterPt" type="number" step="0.5" /></label>
+              </div>
+            </div>
+
+            <div class="rule-section">
+              <h2>标题</h2>
+              <div class="rule-grid">
+                <label><span>字体</span><input data-rule="title.font" type="text" /></label>
+                <label><span>字号 pt</span><input data-rule="title.sizePt" type="number" step="0.5" /></label>
+                <label><span>颜色 HEX</span><input data-rule="title.color" type="text" /></label>
+                <label><span>行距 pt</span><input data-rule="title.lineSpacingPt" type="number" step="0.5" /></label>
+                <label><span>每行最多字数</span><input data-rule="title.maxLineChars" type="number" step="1" /></label>
+                <label><span>红线下空行数</span><input data-rule="title.topBlankLines" type="number" step="0.5" /></label>
+                <label><span>标题后距 pt</span><input data-rule="title.spaceAfterPt" type="number" step="0.5" /></label>
+              </div>
+            </div>
+
+            <div class="rule-section">
+              <h2>正文</h2>
+              <div class="rule-grid">
+                <label><span>正文字体</span><input data-rule="body.font" type="text" /></label>
+                <label><span>正文西文字体</span><input data-rule="body.latinFont" type="text" /></label>
+                <label><span>字号 pt</span><input data-rule="body.sizePt" type="number" step="0.5" /></label>
+                <label><span>正文颜色 HEX</span><input data-rule="body.color" type="text" /></label>
+                <label><span>行距 pt</span><input data-rule="body.lineSpacingPt" type="number" step="0.5" /></label>
+                <label><span>首行缩进 pt</span><input data-rule="body.firstLineIndentPt" type="number" step="0.5" /></label>
+              </div>
+              <div class="rule-grid">
+                <label><span>主送字体</span><input data-rule="mainRecipient.font" type="text" /></label>
+                <label><span>主送字号 pt</span><input data-rule="mainRecipient.sizePt" type="number" step="0.5" /></label>
+                <label><span>主送行距 pt</span><input data-rule="mainRecipient.lineSpacingPt" type="number" step="0.5" /></label>
+                <label><span>标题后距 pt</span><input data-rule="mainRecipient.titleSpaceAfterPt" type="number" step="0.5" /></label>
+              </div>
+              <div class="rule-grid">
+                <label><span>附件字体</span><input data-rule="attachment.font" type="text" /></label>
+                <label><span>附件字号 pt</span><input data-rule="attachment.sizePt" type="number" step="0.5" /></label>
+                <label><span>附件行距 pt</span><input data-rule="attachment.lineSpacingPt" type="number" step="0.5" /></label>
+                <label><span>附件左空字数</span><input data-rule="attachment.leftBlankChars" type="number" step="0.5" /></label>
+                <label><span>正文下空行数</span><input data-rule="attachment.spaceBeforeLines" type="number" step="0.5" /></label>
+              </div>
+              <label class="check-row">
+                <input data-rule="cleanup.trimTrailingBlankPages" type="checkbox" />
+                <span>自动清理源文尾部空白页</span>
+              </label>
+              <label class="check-row">
+                <input data-rule="cleanup.removeExistingHeadersFooters" type="checkbox" />
+                <span>清理源文原有页眉页脚</span>
+              </label>
+              <label class="check-row">
+                <input data-rule="cleanup.convertDocToDocx" type="checkbox" />
+                <span>处理前转换为 DOCX</span>
+              </label>
+              <label class="check-row">
+                <input data-rule="cleanup.fixDoubleAnmeng" type="checkbox" />
+                <span>修正“安安盟”重复字</span>
+              </label>
+            </div>
+
+            <div class="rule-section">
+              <h2>落款与版记</h2>
+              <label><span>默认落款单位</span><input data-rule="signature.company" type="text" /></label>
+              <label><span>默认成文日期</span><input data-rule="signature.date" type="text" /></label>
+              <label class="check-row">
+                <input data-rule="signature.noSeal" type="checkbox" />
+                <span>不加盖印章</span>
+              </label>
+              <div class="rule-grid">
+                <label><span>署名左缩进 pt</span><input data-rule="signature.companyLeftIndentPt" type="number" step="0.5" /></label>
+                <label><span>日期左缩进 pt</span><input data-rule="signature.dateLeftIndentPt" type="number" step="0.5" /></label>
+                <label><span>日期右空字数</span><input data-rule="signature.dateRightIndentChars" type="number" step="0.5" /></label>
+                <label><span>署名居中补偿 pt</span><input data-rule="signature.companyCenterCorrectionPt" type="number" step="0.5" /></label>
+                <label><span>公章宽度 mm</span><input data-rule="signature.seal.widthMm" type="number" step="0.5" /></label>
+                <label><span>公章高度 mm</span><input data-rule="signature.seal.heightMm" type="number" step="0.5" /></label>
+                <label><span>公章垂直偏移 pt</span><input data-rule="signature.seal.verticalOffsetPt" type="number" step="0.5" /></label>
+              </div>
+              <label class="check-row">
+                <input data-rule="signature.seal.enabled" type="checkbox" />
+                <span>启用公章图片</span>
+              </label>
+              <label><span>公章图片路径</span><input data-rule="signature.seal.imagePath" type="text" placeholder="例如 assets/seal.png 或绝对路径" /></label>
+              <label class="check-row">
+                <input data-rule="imprint.enabled" type="checkbox" />
+                <span>启用版记</span>
+              </label>
+              <label><span>印发机关</span><input data-rule="imprint.office" type="text" /></label>
+              <label><span>印发日期</span><input data-rule="imprint.date" type="text" /></label>
+              <label class="check-row">
+                <input data-rule="imprint.mainRecipient.enabled" type="checkbox" />
+                <span>主送机关移至版记</span>
+              </label>
+              <label><span>版记主送机关</span><input data-rule="imprint.mainRecipient.text" type="text" placeholder="多个机关用顿号或逗号分隔" /></label>
+              <label><span>版记主送标签</span><input data-rule="imprint.mainRecipient.label" type="text" /></label>
+              <label class="check-row">
+                <input data-rule="imprint.cc.enabled" type="checkbox" />
+                <span>启用抄送机关</span>
+              </label>
+              <label><span>抄送机关</span><input data-rule="imprint.cc.text" type="text" placeholder="多个机关用顿号或逗号分隔" /></label>
+              <label><span>抄送标签</span><input data-rule="imprint.cc.label" type="text" /></label>
+              <div class="rule-grid">
+                <label><span>版记字体</span><input data-rule="imprint.font" type="text" /></label>
+                <label><span>版记字号 pt</span><input data-rule="imprint.sizePt" type="number" step="0.5" /></label>
+                <label><span>印发机关左空字数</span><input data-rule="imprint.officeLeftChars" type="number" step="1" /></label>
+                <label><span>印发日期右空字数</span><input data-rule="imprint.dateRightChars" type="number" step="1" /></label>
+                <label><span>版记行距 pt</span><input data-rule="imprint.lineSpacingPt" type="number" step="0.5" /></label>
+                <label><span>版记行高 pt</span><input data-rule="imprint.rowHeightPt" type="number" step="0.5" /></label>
+                <label><span>版记基线补偿 pt</span><input data-rule="imprint.baselineShiftPt" type="number" step="0.05" /></label>
+                <label><span>版记上边距 pt</span><input data-rule="imprint.cellPaddingTopPt" type="number" step="0.5" /></label>
+                <label><span>版记下边距 pt</span><input data-rule="imprint.cellPaddingBottomPt" type="number" step="0.5" /></label>
+                <label><span>版记粗线 pt</span><input data-rule="imprint.outerLineWidthPt" type="number" step="0.25" /></label>
+                <label><span>版记细线 pt</span><input data-rule="imprint.innerLineWidthPt" type="number" step="0.25" /></label>
+                <label><span>主送左空字数</span><input data-rule="imprint.mainRecipient.leftBlankChars" type="number" step="1" /></label>
+                <label><span>主送右空字数</span><input data-rule="imprint.mainRecipient.rightBlankChars" type="number" step="1" /></label>
+                <label><span>抄送左空字数</span><input data-rule="imprint.cc.leftBlankChars" type="number" step="1" /></label>
+                <label><span>抄送右空字数</span><input data-rule="imprint.cc.rightBlankChars" type="number" step="1" /></label>
+              </div>
+              <div class="rule-grid">
+                <label class="check-row">
+                  <input data-rule="pageNumber.enabled" type="checkbox" />
+                  <span>启用页码</span>
+                </label>
+                <label><span>页码字体</span><input data-rule="pageNumber.font" type="text" /></label>
+                <label><span>页码字号 pt</span><input data-rule="pageNumber.sizePt" type="number" step="0.5" /></label>
+                <label><span>页码格式</span><input data-rule="pageNumber.format" type="text" /></label>
+                <label>
+                  <span>奇页对齐</span>
+                  <select data-rule="pageNumber.oddAlign">
+                    <option value="right">右</option>
+                    <option value="left">左</option>
+                    <option value="center">居中</option>
+                  </select>
+                </label>
+                <label>
+                  <span>偶页对齐</span>
+                  <select data-rule="pageNumber.evenAlign">
+                    <option value="left">左</option>
+                    <option value="right">右</option>
+                    <option value="center">居中</option>
+                  </select>
+                </label>
+                <label><span>页码空字数</span><input data-rule="pageNumber.blankChars" type="number" step="0.5" /></label>
+                <label><span>页码距版心 mm</span><input data-rule="pageNumber.distanceBelowContentMm" type="number" step="0.1" /></label>
+              </div>
+              <label class="check-row">
+                <input data-rule="imprint.requireEvenPage" type="checkbox" />
+                <span>版记要求偶数页</span>
+              </label>
+              <label class="check-row">
+                <input data-rule="imprint.samePageWhenPossible" type="checkbox" />
+                <span>空间足够时同页放版记</span>
+              </label>
+            </div>
+
+            <button class="primary wide" id="saveRulesBtn" type="button">保存规则</button>
+          </section>
+
+          <section class="tab-pane" id="pane-history">
+            <div id="historyList" class="history-list"></div>
+          </section>
+        </aside>
+
+        <section class="preview-panel">
+          <div class="preview-toolbar">
+            <div>
+              <h2>预览</h2>
+              <p id="previewMeta">等待处理</p>
+            </div>
+            <div class="download-actions" id="downloadActions" hidden>
+              <a class="ghost link-button" id="downloadDocx" href="#">DOCX</a>
+              <a class="ghost link-button" id="downloadPdf" href="#">PDF</a>
+              <a class="ghost link-button" id="downloadLog" href="#">日志</a>
+            </div>
+          </div>
+          <div class="preview-stage" id="previewStage">
+            <div class="empty-preview">
+              <strong>未生成预览</strong>
+              <span>选择 Word 文件后开始套红</span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <section class="result-strip">
+        <div>
+          <h2>检查结果</h2>
+          <p id="statusText">未处理</p>
+        </div>
+        <ul id="checksList" class="checks"></ul>
+      </section>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
