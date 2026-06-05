@@ -122,6 +122,11 @@ button:disabled {
   color: var(--ink);
 }
 
+.danger {
+  border-color: rgba(196, 22, 28, 0.55);
+  color: var(--red-dark);
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(360px, 430px) minmax(0, 1fr);
@@ -269,6 +274,13 @@ textarea {
 
 .rule-section h2 {
   font-size: 15px;
+}
+
+.note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
 }
 
 .preview-panel {

@@ -41,6 +41,8 @@ http://0.0.0.0:3721
 - 任务串行处理，降低 Word COM 并发冲突
 - 单任务默认 300 秒超时，可通过 `REDHEAD_JOB_TIMEOUT_MS` 调整
 - 超时后按本任务记录的 Word PID 做清理
+- 处理产物默认按“保留 30 天、最多 200 个任务”自动清理，可通过 `REDHEAD_JOB_RETENTION_DAYS`、`REDHEAD_JOB_RETENTION_MAX`、`REDHEAD_CLEANUP_ON_START`、`REDHEAD_CLEANUP_AFTER_JOB` 调整
+- 记录页提供产物清理预估和立即清理，清理 `output/<任务ID>` 时会同步清理同名 `uploads/<任务ID>`
 - 每个任务生成 `job-status.json`，记录当前阶段、最后更新时间、耗时、PowerShell PID 和 Word PID
 - 超时或失败时，服务端会把最后阶段写入错误响应和 `process.log`，用于定位卡在启动 Word、打开文档、导出 PDF、校验等哪一步
 - 发文机关标志按版心上边缘下 35mm 定位，红色方正小标宋简体、58pt、居中处理
@@ -79,6 +81,7 @@ npm test
 - 规则执行矩阵覆盖全部业务规则项
 - 规则执行矩阵中引用的应用函数、代码路径和文档校验标签必须真实存在
 - `docs/rule-execution-matrix.md` 必须覆盖当前业务规则叶子项
+- 任务产物清理策略 dry-run 和实际删除行为
 - `server.js`、`public/app.js`、`lib/rules-validator.js` 语法检查
 - `scripts/redhead.ps1` 和 `scripts/modules/*.ps1` PowerShell 语法检查
 - 非法规则值拒绝测试

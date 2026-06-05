@@ -152,6 +152,8 @@ function setBusy(isBusy, text = "") {
   $("#saveRulesTopBtn").disabled = isBusy;
   $("#restoreRuleBtn").disabled = isBusy;
   $("#refreshVersionsBtn").disabled = isBusy;
+  $("#previewCleanupBtn").disabled = isBusy;
+  $("#runCleanupBtn").disabled = isBusy;
   if (text) $("#statusText").textContent = text;
 }
 
@@ -241,6 +243,7 @@ function loadHistory() {
 function saveHistoryItem(result) {
   const history = loadHistory();
   history.unshift({
+    jobId: result.jobId,
     time: new Date().toISOString(),
     originalName: result.originalName,
     pages: result.pages,
@@ -248,6 +251,82 @@ function saveHistoryItem(result) {
   });
   localStorage.setItem("redhead-history", JSON.stringify(history.slice(0, 12)));
   renderHistory();
+}
+
+function formatBytes(bytes) {
+  const value = Number(bytes || 0);
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  if (value < 1024 * 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
+  return `${(value / 1024 / 1024 / 1024).toFixed(1)} GB`;
+}
+
+function collectCleanupOptions() {
+  return {
+    retentionDays: Number($("#cleanupRetentionDays").value),
+    maxJobs: Number($("#cleanupMaxJobs").value)
+  };
+}
+
+function renderCleanupSummary(result, prefix = "预估") {
+  const outputs = result.targetCounts?.outputs || 0;
+  const uploads = result.targetCounts?.uploads || 0;
+  const protectedCount = result.protectedNames?.length || 0;
+  $("#cleanupSummary").textContent = `${prefix}：输出目录 ${outputs} 个，上传目录 ${uploads} 个，预计释放 ${formatBytes(result.reclaimedBytes)}。已保护运行中任务 ${protectedCount} 个。`;
+}
+
+function removeDeletedHistory(result) {
+  const deletedJobs = new Set((result.deleted?.outputs || []).map((item) => item.name));
+  if (!deletedJobs.size) return;
+  const history = loadHistory().filter((item) => !item.jobId || !deletedJobs.has(item.jobId));
+  localStorage.setItem("redhead-history", JSON.stringify(history));
+  renderHistory();
+}
+
+async function previewCleanup() {
+  const options = collectCleanupOptions();
+  const query = new URLSearchParams({
+    retentionDays: String(options.retentionDays),
+    maxJobs: String(options.maxJobs)
+  });
+  setBusy(true, "正在预估清理");
+  try {
+    const response = await fetch(`/api/cleanup/preview?${query}`);
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "预估清理失败");
+    renderCleanupSummary(result, "预估清理");
+    setStatus("清理预估完成", [
+      { Label: "输出目录", Status: "pass", Detail: `${result.targetCounts.outputs} 个` },
+      { Label: "上传目录", Status: "pass", Detail: `${result.targetCounts.uploads} 个` },
+      { Label: "预计释放", Status: "pass", Detail: formatBytes(result.reclaimedBytes) }
+    ]);
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function runCleanup() {
+  const options = collectCleanupOptions();
+  if (!confirm("确认按当前策略清理输出和上传目录？")) return;
+  setBusy(true, "正在清理产物");
+  try {
+    const response = await fetch("/api/cleanup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(options)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "清理失败");
+    renderCleanupSummary(result, "已清理");
+    removeDeletedHistory(result);
+    setStatus("清理完成", [
+      { Label: "已清理输出目录", Status: "pass", Detail: `${result.targetCounts.outputs} 个` },
+      { Label: "已清理上传目录", Status: "pass", Detail: `${result.targetCounts.uploads} 个` },
+      { Label: "释放空间", Status: "pass", Detail: formatBytes(result.reclaimedBytes) }
+    ]);
+  } finally {
+    setBusy(false);
+  }
 }
 
 function renderHistory() {
@@ -348,6 +427,8 @@ function bindEvents() {
       setBusy(false);
     }
   });
+  $("#previewCleanupBtn").addEventListener("click", previewCleanup);
+  $("#runCleanupBtn").addEventListener("click", runCleanup);
 }
 
 bindEvents();

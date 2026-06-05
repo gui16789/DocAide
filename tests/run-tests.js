@@ -1,6 +1,8 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
+const { cleanupJobArtifacts } = require("../lib/job-cleanup");
 const { loadSchema, validateRules } = require("../lib/rules-validator");
 const {
   businessRuleLeaves,
@@ -185,7 +187,54 @@ test("规则执行矩阵 Markdown 已生成并覆盖当前规则", () => {
 test("前端和服务端 JS 语法通过", () => {
   run(process.execPath, ["--check", "server.js"]);
   run(process.execPath, ["--check", "public/app.js"]);
+  run(process.execPath, ["--check", "lib/job-cleanup.js"]);
+  run(process.execPath, ["--check", "lib/rule-coverage.js"]);
   run(process.execPath, ["--check", "lib/rules-validator.js"]);
+  run(process.execPath, ["--check", "scripts/generate-rule-coverage-doc.js"]);
+});
+
+test("任务产物清理策略支持预览和执行", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "redhead-cleanup-"));
+  const outputDir = path.join(root, "output");
+  const uploadDir = path.join(root, "uploads");
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.mkdirSync(uploadDir, { recursive: true });
+  const now = new Date("2026-06-05T00:00:00.000Z");
+
+  function createJob(baseDir, name, daysAgo) {
+    const dir = path.join(baseDir, name);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "file.txt"), name);
+    const date = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+    fs.utimesSync(path.join(dir, "file.txt"), date, date);
+    fs.utimesSync(dir, date, date);
+  }
+
+  try {
+    for (const name of ["keep-1", "keep-2", "overflow", "old-job"]) {
+      const daysAgo = { "keep-1": 0, "keep-2": 1, overflow: 2, "old-job": 40 }[name];
+      createJob(outputDir, name, daysAgo);
+      createJob(uploadDir, name, daysAgo);
+    }
+    createJob(uploadDir, "orphan-upload", 40);
+
+    const policy = { retentionDays: 30, maxJobs: 2, dryRun: true };
+    const preview = await cleanupJobArtifacts({ outputDir, uploadDir, policy, now });
+    assert(preview.targetCounts.outputs === 2, `预估输出目录数量错误：${preview.targetCounts.outputs}`);
+    assert(preview.targetCounts.uploads === 3, `预估上传目录数量错误：${preview.targetCounts.uploads}`);
+    assert(fs.existsSync(path.join(outputDir, "old-job")), "dry-run 不应删除目录");
+
+    const cleaned = await cleanupJobArtifacts({ outputDir, uploadDir, policy: { ...policy, dryRun: false }, now });
+    assert(cleaned.targetCounts.outputs === 2, "实际清理输出目录数量错误");
+    assert(!fs.existsSync(path.join(outputDir, "old-job")), "未清理过期输出目录");
+    assert(!fs.existsSync(path.join(outputDir, "overflow")), "未按最大任务数清理输出目录");
+    assert(!fs.existsSync(path.join(uploadDir, "old-job")), "未清理同名上传目录");
+    assert(!fs.existsSync(path.join(uploadDir, "orphan-upload")), "未清理过期孤立上传目录");
+    assert(fs.existsSync(path.join(outputDir, "keep-1")), "误删最新输出目录");
+    assert(fs.existsSync(path.join(uploadDir, "keep-2")), "误删保留上传目录");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("PowerShell 脚本语法通过", () => {
@@ -246,21 +295,23 @@ test("可选 Word COM 回归", () => {
   assert(fs.existsSync(result.outputPdf), "未生成 PDF");
 });
 
-let failures = 0;
-for (const item of tests) {
-  try {
-    item.fn();
-    console.log(`PASS ${item.name}`);
-  } catch (error) {
-    failures += 1;
-    console.error(`FAIL ${item.name}`);
-    console.error(error.message);
+(async () => {
+  let failures = 0;
+  for (const item of tests) {
+    try {
+      await Promise.resolve(item.fn());
+      console.log(`PASS ${item.name}`);
+    } catch (error) {
+      failures += 1;
+      console.error(`FAIL ${item.name}`);
+      console.error(error.message);
+    }
   }
-}
 
-if (failures) {
-  console.error(`${failures} test(s) failed`);
-  process.exit(1);
-}
+  if (failures) {
+    console.error(`${failures} test(s) failed`);
+    process.exit(1);
+  }
 
-console.log(`${tests.length} test(s) passed`);
+  console.log(`${tests.length} test(s) passed`);
+})();

@@ -281,6 +281,18 @@
           </section>
 
           <section class="tab-pane" id="pane-history">
+            <div class="rule-section">
+              <h2>产物清理</h2>
+              <div class="rule-grid">
+                <label><span>保留天数</span><input id="cleanupRetentionDays" type="number" min="0" step="1" value="30" /></label>
+                <label><span>最多任务数</span><input id="cleanupMaxJobs" type="number" min="0" step="1" value="200" /></label>
+              </div>
+              <div class="rule-actions">
+                <button class="ghost" id="previewCleanupBtn" type="button">预估清理</button>
+                <button class="ghost danger" id="runCleanupBtn" type="button">立即清理</button>
+              </div>
+              <p class="note" id="cleanupSummary">按任务目录清理输出和同名上传源文件。</p>
+            </div>
             <div id="historyList" class="history-list"></div>
           </section>
         </aside>

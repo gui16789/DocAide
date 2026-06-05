@@ -4,6 +4,7 @@ const fsp = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
 const { spawn, spawnSync } = require("child_process");
+const { cleanupJobArtifacts, normalizeCleanupPolicy } = require("./lib/job-cleanup");
 const { assertValidRules, loadSchema } = require("./lib/rules-validator");
 
 const ROOT = __dirname;
@@ -17,6 +18,8 @@ const RULES_PATH = path.join(DATA_DIR, "rules.json");
 const RULES_HISTORY_PATH = path.join(DATA_DIR, "rules-history.json");
 const RULES_SCHEMA_PATH = path.join(DATA_DIR, "rules.schema.json");
 const JOB_TIMEOUT_MS = Number(process.env.REDHEAD_JOB_TIMEOUT_MS || 300000);
+const CLEANUP_ON_START = process.env.REDHEAD_CLEANUP_ON_START !== "0";
+const CLEANUP_AFTER_JOB = process.env.REDHEAD_CLEANUP_AFTER_JOB !== "0";
 const RULES_SCHEMA = loadSchema(RULES_SCHEMA_PATH);
 
 const MIME_TYPES = {
@@ -32,6 +35,7 @@ const MIME_TYPES = {
 };
 
 let queue = Promise.resolve();
+const activeJobIds = new Set();
 
 function getPort() {
   const index = process.argv.indexOf("--port");
@@ -256,6 +260,26 @@ function readJsonIfExists(filePath) {
   }
 }
 
+async function runArtifactCleanup(input = {}) {
+  const policy = normalizeCleanupPolicy(input);
+  return cleanupJobArtifacts({
+    outputDir: OUTPUT_DIR,
+    uploadDir: UPLOAD_DIR,
+    policy,
+    protectedNames: activeJobIds
+  });
+}
+
+function scheduleArtifactCleanup(reason) {
+  runArtifactCleanup({ dryRun: false }).then((result) => {
+    if (result.targetCounts.outputs || result.targetCounts.uploads) {
+      console.log(`[cleanup:${reason}] removed outputs=${result.targetCounts.outputs}, uploads=${result.targetCounts.uploads}, bytes=${result.reclaimedBytes}`);
+    }
+  }).catch((error) => {
+    console.warn(`[cleanup:${reason}] ${error.message}`);
+  });
+}
+
 async function writeJobStatus(statusPath, status) {
   if (!statusPath) return;
   const payload = {
@@ -433,6 +457,8 @@ async function processDocument(body, contentType) {
   if (![".doc", ".docx"].includes(ext)) throw new Error("仅支持 .doc 和 .docx 文件");
 
   const jobId = `${new Date().toISOString().replace(/[-:.TZ]/g, "")}-${crypto.randomBytes(3).toString("hex")}`;
+  activeJobIds.add(jobId);
+  try {
   const uploadJobDir = path.join(UPLOAD_DIR, jobId);
   const outputJobDir = path.join(OUTPUT_DIR, jobId);
   await fsp.mkdir(uploadJobDir, { recursive: true });
@@ -505,6 +531,10 @@ async function processDocument(body, contentType) {
   };
   result.status = readJsonIfExists(statusPath);
   return result;
+  } finally {
+    activeJobIds.delete(jobId);
+    if (CLEANUP_AFTER_JOB) scheduleArtifactCleanup("after-job");
+  }
 }
 
 async function serveStatic(req, res, pathname) {
@@ -584,6 +614,26 @@ async function handle(req, res) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/cleanup/preview") {
+      sendJson(res, 200, await runArtifactCleanup({
+        retentionDays: url.searchParams.get("retentionDays"),
+        maxJobs: url.searchParams.get("maxJobs"),
+        dryRun: true
+      }));
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/cleanup") {
+      const body = await readRequestBody(req, 512 * 1024);
+      const payload = body.length ? JSON.parse(body.toString("utf8")) : {};
+      sendJson(res, 200, await runArtifactCleanup({
+        retentionDays: payload.retentionDays,
+        maxJobs: payload.maxJobs,
+        dryRun: false
+      }));
+      return;
+    }
+
     if (req.method === "POST" && pathname === "/api/process") {
       const body = await readRequestBody(req);
       const result = await enqueue(() => processDocument(body, req.headers["content-type"] || ""));
@@ -620,6 +670,7 @@ ensureDirs()
     const host = getHost();
     http.createServer(handle).listen(port, host, () => {
       console.log(`Redhead web tool listening on http://${host}:${port}`);
+      if (CLEANUP_ON_START) scheduleArtifactCleanup("startup");
     });
   })
   .catch((error) => {
