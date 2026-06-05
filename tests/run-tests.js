@@ -267,6 +267,11 @@ test("可选 Word COM 回归", () => {
   assert(fs.existsSync(fixture), "缺少 Word 回归样例");
   const output = path.join(ROOT, "output", `qa-auto-${Date.now()}`);
   fs.mkdirSync(output, { recursive: true });
+  const unicodeFixture = path.join(
+    output,
+    "关于对安盟保险四川省成都市地方财政补贴性农业经营主体用工团体意外伤害保险（2026）等2个产品进行报备的报告.docx"
+  );
+  fs.copyFileSync(fixture, unicodeFixture);
   const metaPath = path.join(output, "meta.json");
   const resultPath = path.join(output, "result.json");
   const statusPath = path.join(output, "job-status.json");
@@ -281,7 +286,7 @@ test("可选 Word COM 回归", () => {
   }, null, 2));
   powerShellCommand([
     `& '${path.join(ROOT, "scripts", "redhead.ps1").replace(/'/g, "''")}'`,
-    `-InputPath '${fixture.replace(/'/g, "''")}'`,
+    `-InputPath '${unicodeFixture.replace(/'/g, "''")}'`,
     `-OutputDir '${output.replace(/'/g, "''")}'`,
     `-RulesPath '${path.join(ROOT, "data", "rules.json").replace(/'/g, "''")}'`,
     `-MetaPath '${metaPath.replace(/'/g, "''")}'`,

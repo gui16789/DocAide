@@ -115,8 +115,13 @@ try {
   $pdfExportScriptPath = Join-Path $OutputDir "export-pdf.ps1"
   $pdfExportOut = Join-Path $OutputDir "pdf-export.out.log"
   $pdfExportErr = Join-Path $OutputDir "pdf-export.err.log"
-  $escapedDocx = $outputDocx.Replace("'", "''")
-  $escapedPdf = $outputPdf.Replace("'", "''")
+  $pdfExportDocx = Join-Path $OutputDir "pdf-export-source.docx"
+  $pdfExportTempPdf = Join-Path $OutputDir "pdf-export-output.pdf"
+  Copy-Item -LiteralPath $outputDocx -Destination $pdfExportDocx -Force
+  Remove-Item -LiteralPath $pdfExportTempPdf -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $outputPdf -Force -ErrorAction SilentlyContinue
+  $escapedDocx = $pdfExportDocx.Replace("'", "''")
+  $escapedPdf = $pdfExportTempPdf.Replace("'", "''")
   $pdfExportScript = @"
 `$ErrorActionPreference = "Stop"
 `$word = `$null
@@ -140,13 +145,43 @@ try {
   [GC]::WaitForPendingFinalizers()
 }
 "@
-  $pdfExportScript | Set-Content -LiteralPath $pdfExportScriptPath -Encoding UTF8
+  $pdfExportScript | Set-Content -LiteralPath $pdfExportScriptPath -Encoding Unicode
   $pdfProcess = Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $pdfExportScriptPath) -PassThru -WindowStyle Hidden -RedirectStandardOutput $pdfExportOut -RedirectStandardError $pdfExportErr
+  $pdfExportTimedOut = $false
+  $pdfExportExitCode = $null
   if (-not $pdfProcess.WaitForExit(90000)) {
+    $pdfExportTimedOut = $true
     try { Stop-Process -Id $pdfProcess.Id -Force -ErrorAction SilentlyContinue } catch {}
+  } else {
+    $pdfProcess.Refresh()
+    $pdfExportExitCode = $pdfProcess.ExitCode
+  }
+
+  if ($pdfExportTimedOut) {
     Write-JobStatus "pdf-export-timeout" "PDF 导出超时，继续执行 DOCX 校验" @{ outputPdf = $outputPdf }
-  } elseif ($pdfProcess.ExitCode -ne 0) {
-    Write-JobStatus "pdf-export-failed" "PDF 导出失败，继续执行 DOCX 校验" @{ exitCode = $pdfProcess.ExitCode; outputPdf = $outputPdf }
+  } else {
+    $pdfExportReady = $false
+    for ($i = 0; $i -lt 30; $i++) {
+      if ((Test-Path -LiteralPath $pdfExportTempPdf) -and ((Get-Item -LiteralPath $pdfExportTempPdf).Length -gt 0)) {
+        $pdfExportReady = $true
+        break
+      }
+      Start-Sleep -Milliseconds 500
+    }
+
+    if ($pdfExportReady) {
+      try {
+        Move-Item -LiteralPath $pdfExportTempPdf -Destination $outputPdf -Force -ErrorAction Stop
+        Remove-Item -LiteralPath $pdfExportDocx -Force -ErrorAction SilentlyContinue
+        Write-JobStatus "pdf-exported" "PDF 预览文件已生成" @{ exitCode = $pdfExportExitCode; outputPdf = $outputPdf }
+      } catch {
+        Write-JobStatus "pdf-export-failed" "PDF 预览文件移动失败，继续执行 DOCX 校验" @{ error = $_.Exception.Message; outputPdf = $outputPdf }
+      }
+    } elseif ($pdfExportExitCode -ne 0) {
+      Write-JobStatus "pdf-export-failed" "PDF 导出失败，继续执行 DOCX 校验" @{ exitCode = $pdfExportExitCode; outputPdf = $outputPdf }
+    } else {
+      Write-JobStatus "pdf-export-failed" "PDF 导出进程完成但未生成预览文件" @{ outputPdf = $outputPdf }
+    }
   }
 
   Write-JobStatus "document-reopening" "正在重新打开已保存 DOCX 以执行格式校验"
