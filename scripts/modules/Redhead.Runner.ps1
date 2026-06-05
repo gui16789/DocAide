@@ -26,7 +26,7 @@ try {
 
   $inputExtension = [IO.Path]::GetExtension($InputPath).ToLowerInvariant()
   $convertToDocx = [bool](Get-RuleValue $rules "cleanup.convertDocToDocx" $true)
-  if (($inputExtension -eq ".doc") -or $convertToDocx) {
+  if (($inputExtension -eq ".doc") -or (($inputExtension -ne ".docx") -and $convertToDocx)) {
     Write-JobStatus "input-converting" "正在打开源文件并转换为 DOCX" @{ inputPath = $InputPath }
     $doc = $word.Documents.Open($InputPath, $false, $false)
     $doc.Activate()
@@ -103,8 +103,66 @@ try {
   $imprintPage = if ([bool](Get-RuleValue $rules "imprint.enabled" $true)) { $totalPages } else { $null }
   Write-JobStatus "document-saving" "正在保存套红 DOCX" @{ totalPages = $totalPages; imprintPage = $imprintPage }
   $doc.Save()
-  Write-JobStatus "pdf-exporting" "正在导出 PDF 预览" @{ outputPdf = $outputPdf }
-  $doc.ExportAsFixedFormat($outputPdf, 17)
+  Write-JobStatus "document-reopening" "正在重启 Word 并准备稳定导出和校验"
+  $doc.Close($true) | Out-Null
+  [void][Runtime.InteropServices.Marshal]::ReleaseComObject($doc)
+  $doc = $null
+  $word.Quit() | Out-Null
+  [void][Runtime.InteropServices.Marshal]::ReleaseComObject($word)
+  $word = $null
+
+  Write-JobStatus "pdf-exporting" "正在通过独立 Word 进程导出 PDF 预览" @{ outputPdf = $outputPdf }
+  $pdfExportScriptPath = Join-Path $OutputDir "export-pdf.ps1"
+  $pdfExportOut = Join-Path $OutputDir "pdf-export.out.log"
+  $pdfExportErr = Join-Path $OutputDir "pdf-export.err.log"
+  $escapedDocx = $outputDocx.Replace("'", "''")
+  $escapedPdf = $outputPdf.Replace("'", "''")
+  $pdfExportScript = @"
+`$ErrorActionPreference = "Stop"
+`$word = `$null
+`$doc = `$null
+try {
+  `$word = New-Object -ComObject Word.Application
+  `$word.Visible = `$false
+  `$word.DisplayAlerts = 0
+  `$doc = `$word.Documents.Open('$escapedDocx', `$false, `$true)
+  `$doc.ExportAsFixedFormat('$escapedPdf', 17)
+} finally {
+  if (`$null -ne `$doc) {
+    try { `$doc.Close(`$false) | Out-Null } catch {}
+    [void][Runtime.InteropServices.Marshal]::ReleaseComObject(`$doc)
+  }
+  if (`$null -ne `$word) {
+    try { `$word.Quit() | Out-Null } catch {}
+    [void][Runtime.InteropServices.Marshal]::ReleaseComObject(`$word)
+  }
+  [GC]::Collect()
+  [GC]::WaitForPendingFinalizers()
+}
+"@
+  $pdfExportScript | Set-Content -LiteralPath $pdfExportScriptPath -Encoding UTF8
+  $pdfProcess = Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $pdfExportScriptPath) -PassThru -WindowStyle Hidden -RedirectStandardOutput $pdfExportOut -RedirectStandardError $pdfExportErr
+  if (-not $pdfProcess.WaitForExit(90000)) {
+    try { Stop-Process -Id $pdfProcess.Id -Force -ErrorAction SilentlyContinue } catch {}
+    Write-JobStatus "pdf-export-timeout" "PDF 导出超时，继续执行 DOCX 校验" @{ outputPdf = $outputPdf }
+  } elseif ($pdfProcess.ExitCode -ne 0) {
+    Write-JobStatus "pdf-export-failed" "PDF 导出失败，继续执行 DOCX 校验" @{ exitCode = $pdfProcess.ExitCode; outputPdf = $outputPdf }
+  }
+
+  Write-JobStatus "document-reopening" "正在重新打开已保存 DOCX 以执行格式校验"
+  $wordStartedAt = Get-Date
+  $word = New-Object -ComObject Word.Application
+  $word.Visible = $false
+  $word.DisplayAlerts = 0
+  $script:CurrentWordPid = Get-WordProcessId $word
+  if ($null -eq $script:CurrentWordPid) {
+    $script:CurrentWordPid = Get-RecentWordProcessId $wordStartedAt
+  }
+  Write-ProcessPidFile $PidPath $script:CurrentWordPid
+  $doc = $word.Documents.Open($outputDocx, $false, $true)
+  $doc.Repaginate()
+  $totalPages = [int]$doc.ComputeStatistics(2)
+  $imprintPage = if ([bool](Get-RuleValue $rules "imprint.enabled" $true)) { $totalPages } else { $null }
 
   Write-JobStatus "validating" "正在执行格式校验"
   $checks = Build-ValidationChecks $doc $rules $meta $imprintInfo $trimInfo $totalPages $imprintPage $outputPdf

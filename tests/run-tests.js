@@ -23,7 +23,7 @@ function assert(condition, message) {
 }
 
 function readText(relativePath, encoding = "utf8") {
-  return fs.readFileSync(path.join(ROOT, relativePath), encoding);
+  return fs.readFileSync(path.join(ROOT, relativePath), encoding).replace(/^\uFEFF/, "");
 }
 
 function readJson(relativePath) {
@@ -289,7 +289,7 @@ test("可选 Word COM 回归", () => {
     `-PidPath '${pidPath.replace(/'/g, "''")}'`,
     `-StatusPath '${statusPath.replace(/'/g, "''")}'`
   ].join(" "));
-  const result = JSON.parse(fs.readFileSync(resultPath, "utf8"));
+  const result = JSON.parse(fs.readFileSync(resultPath, "utf8").replace(/^\uFEFF/, ""));
   assert(result.ok === true, "Word COM 回归未成功");
   assert(fs.existsSync(result.outputDocx), "未生成 DOCX");
   assert(fs.existsSync(result.outputPdf), "未生成 PDF");

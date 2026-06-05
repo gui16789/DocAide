@@ -127,7 +127,7 @@
       "verification": [
         { "type": "document-check", "label": "红线已设置" },
         { "type": "document-check", "label": "版头红线颜色线宽符合规则" },
-        { "type": "document-check", "label": "版头红线位于发文字号下4mm" },
+        { "type": "document-check", "label": "版头红线浮动位置符合标准模板" },
         { "type": "document-check", "label": "版头红线居中且与版心等宽" },
         { "type": "document-check", "label": "标题编排于红色分隔线下空二行" }
       ]
@@ -145,7 +145,7 @@
       "verification": [
         { "type": "document-check", "label": "标题编排于红色分隔线下空二行" },
         { "type": "document-check", "label": "标题字体字号颜色行距居中符合规范" },
-        { "type": "document-check", "label": "标题已合并并按词义主动分行" }
+        { "type": "document-check", "label": "标题已按词义主动分行" }
       ]
     },
     {
@@ -341,7 +341,7 @@
       "verification": [
         { "type": "document-check", "label": "正文页脚已设置页码字段" },
         { "type": "document-check", "label": "页码字体字号形式符合规范" },
-        { "type": "document-check", "label": "页码位于版心下边缘下7mm" },
+        { "type": "document-check", "label": "页码位于版心下边缘下方规则距离" },
         { "type": "document-check", "label": "页码单双页按规则对齐并空字" },
         { "type": "document-check", "label": "空白页不编页码" },
         { "type": "document-check", "label": "空白页后的版记页不编页码" },

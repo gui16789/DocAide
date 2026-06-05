@@ -332,6 +332,16 @@ function Set-RangeFont {
   $Range.Font.Italic = 0
 }
 
+function Clear-ParagraphSpacingUnits {
+  param($Paragraph)
+  try {
+    $Paragraph.Range.ParagraphFormat.SpaceBeforeAuto = 0
+    $Paragraph.Range.ParagraphFormat.SpaceAfterAuto = 0
+    $Paragraph.Range.ParagraphFormat.LineUnitBefore = 0
+    $Paragraph.Range.ParagraphFormat.LineUnitAfter = 0
+  } catch {}
+}
+
 function Set-BodyParagraph {
   param($Paragraph, $Rules)
   $bodyFont = Get-RuleValue $Rules "body.font" "仿宋_GB2312"
@@ -342,6 +352,7 @@ function Set-BodyParagraph {
   $firstIndent = [double](Get-RuleValue $Rules "body.firstLineIndentPt" 32)
 
   Set-RangeFont $Paragraph.Range $bodyFont $bodySize $latinFont $bodyColor
+  Clear-ParagraphSpacingUnits $Paragraph
   $Paragraph.Range.ParagraphFormat.Alignment = 0
   $Paragraph.Range.ParagraphFormat.LineSpacingRule = 4
   $Paragraph.Range.ParagraphFormat.LineSpacing = $lineSpacing
@@ -357,16 +368,16 @@ function Set-TitleParagraph {
   $titleSize = [double](Get-RuleValue $Rules "title.sizePt" 22)
   $titleColor = Convert-HexToWordColor (Get-RuleValue $Rules "title.color" "000000")
   $lineSpacing = [double](Get-RuleValue $Rules "title.lineSpacingPt" 32)
-  $spaceAfter = [double](Get-RuleValue $Rules "mainRecipient.titleSpaceAfterPt" (Get-RuleValue $Rules "title.spaceAfterPt" 22))
 
   Set-RangeFont $Paragraph.Range $titleFont $titleSize "" $titleColor
+  Clear-ParagraphSpacingUnits $Paragraph
   $Paragraph.Range.ParagraphFormat.Alignment = 1
   $Paragraph.Range.ParagraphFormat.LineSpacingRule = 4
   $Paragraph.Range.ParagraphFormat.LineSpacing = $lineSpacing
   $Paragraph.Range.ParagraphFormat.FirstLineIndent = 0
   $Paragraph.Range.ParagraphFormat.LeftIndent = 0
   $Paragraph.Range.ParagraphFormat.SpaceBefore = 0
-  $Paragraph.Range.ParagraphFormat.SpaceAfter = $spaceAfter
+  $Paragraph.Range.ParagraphFormat.SpaceAfter = 0
 }
 
 function Set-MainRecipientParagraph {
@@ -378,6 +389,7 @@ function Set-MainRecipientParagraph {
   $color = Convert-HexToWordColor (Get-RuleValue $Rules "body.color" "000000")
 
   Set-RangeFont $Paragraph.Range $font $size $latinFont $color
+  Clear-ParagraphSpacingUnits $Paragraph
   $Paragraph.Range.ParagraphFormat.Alignment = 0
   $Paragraph.Range.ParagraphFormat.LineSpacingRule = 4
   $Paragraph.Range.ParagraphFormat.LineSpacing = $lineSpacing
@@ -720,7 +732,7 @@ function Split-TitleText {
   for ($line = 1; $line -le $lineCount; $line++) {
     $nextStates = @()
     foreach ($state in $states) {
-      $last = [int]$state.Breaks[-1]
+      $last = [int]$state["Breaks"][-1]
       foreach ($point in $points) {
         if ($point -le $last) { continue }
         if ($line -lt $lineCount -and $point -ge $title.Length) { continue }
@@ -728,7 +740,7 @@ function Split-TitleText {
 
         $segmentLength = $point - $last
         if ($segmentLength -le 0) { continue }
-        $score = [double]$state.Score + [Math]::Pow($segmentLength - $target, 2)
+        $score = [double]$state["Score"] + [Math]::Pow($segmentLength - $target, 2)
         if ($segmentLength -lt 6 -and $line -lt $lineCount) { $score += 100 }
         if ($segmentLength -gt ($MaxLineChars + 4)) { $score += 120 }
         if (-not $semanticSet.Contains($point) -and $point -ne $title.Length) { $score += 140 }
@@ -738,15 +750,15 @@ function Split-TitleText {
         if ($segment.EndsWith("的") -or $segment.EndsWith("对") -or $segment.EndsWith("关于")) { $score += 50 }
         if ($line -gt 1 -and ("的对和与及、，）)".Contains([string]$segment[0]))) { $score += 50 }
 
-        $breaks = @($state.Breaks + $point)
+        $breaks = @($state["Breaks"] + $point)
         $nextStates += @{ Score = $score; Breaks = $breaks }
       }
     }
-    $states = @($nextStates | Sort-Object Score | Select-Object -First 60)
+    $states = @($nextStates | Sort-Object { [double]$_["Score"] } | Select-Object -First 60)
   }
 
   if ($states.Count -eq 0) { return @($title) }
-  $best = $states[0].Breaks
+  $best = $states[0]["Breaks"]
   $lines = @()
   for ($i = 1; $i -lt $best.Count; $i++) {
     $start = [int]$best[$i - 1]
@@ -781,12 +793,11 @@ function Normalize-TitleBlock {
   $titleLines = Split-TitleText ($titleParts -join "") $maxLineChars
   if ($titleLines.Count -eq 0) { return }
 
-  $softBreak = [string][char]11
-  $formattedTitle = ($titleLines -join $softBreak)
+  $formattedTitle = ($titleLines -join "`r")
   $replaceStart = $Document.Paragraphs.Item($titleStartIndex).Range.Start
   $replaceEnd = $Document.Paragraphs.Item($bodyStartIndex).Range.Start
   $range = $Document.Range($replaceStart, $replaceEnd)
-  $range.Text = "$formattedTitle`r"
+  $range.Text = "$formattedTitle`r`r"
 }
 
 function Clear-HeadersFooters {
@@ -935,7 +946,7 @@ function Apply-PageSetup {
   $bottom = Convert-MmToPt ([double](Get-RuleValue $Rules "page.bottomMarginMm" 35))
   $left = Convert-MmToPt ([double](Get-RuleValue $Rules "page.leftMarginMm" 28))
   $right = Convert-MmToPt ([double](Get-RuleValue $Rules "page.rightMarginMm" 26))
-  $pageNumberDistance = Convert-MmToPt ([double](Get-RuleValue $Rules "pageNumber.distanceBelowContentMm" 7))
+  $pageNumberDistance = Convert-MmToPt ([double](Get-RuleValue $Rules "pageNumber.distanceBelowContentMm" 17.5))
   $footerDistance = [Math]::Max(0, $bottom - $pageNumberDistance)
 
   foreach ($section in $Document.Sections) {
@@ -975,6 +986,148 @@ function Replace-InitialTitle {
   }
 }
 
+function Test-FontNameMatches {
+  param([string]$Actual, [string]$Expected)
+  if ([string]::IsNullOrWhiteSpace($Actual) -or [string]::IsNullOrWhiteSpace($Expected)) { return $false }
+  $actualClean = ($Actual -replace "[-_ ]?GB2312", "").Trim()
+  $expectedClean = ($Expected -replace "[-_ ]?GB2312", "").Trim()
+  return ($Actual -eq $Expected) -or ($actualClean -eq $expectedClean)
+}
+
+function Set-RedLineBlankParagraph {
+  param($Paragraph, $Rules)
+  $blankFont = Get-RuleValue $Rules "body.font" "仿宋_GB2312"
+  $blankSize = [double](Get-RuleValue $Rules "title.sizePt" 22)
+  $lineSpacing = [double](Get-RuleValue $Rules "documentNo.redLineLineBoxHeightPt" 28)
+
+  Set-RangeFont $Paragraph.Range $blankFont $blankSize "" 0
+  Clear-ParagraphSpacingUnits $Paragraph
+  $Paragraph.Range.ParagraphFormat.Alignment = 1
+  $Paragraph.Range.ParagraphFormat.LineSpacingRule = 4
+  $Paragraph.Range.ParagraphFormat.LineSpacing = $lineSpacing
+  $Paragraph.Range.ParagraphFormat.FirstLineIndent = 0
+  $Paragraph.Range.ParagraphFormat.LeftIndent = 0
+  $Paragraph.Range.ParagraphFormat.RightIndent = 0
+  $Paragraph.Range.ParagraphFormat.SpaceBefore = 0
+  $Paragraph.Range.ParagraphFormat.SpaceAfter = 0
+}
+
+function Ensure-BlankParagraphsAfterDocumentNo {
+  param($Document, [int]$DocNoIndex, $Rules, [int]$Count = 2)
+
+  $existing = 0
+  for ($i = $DocNoIndex + 1; $i -le $Document.Paragraphs.Count; $i++) {
+    $paragraph = $Document.Paragraphs.Item($i)
+    if (-not (Test-BlankParagraph $paragraph)) { break }
+    $existing++
+    if ($existing -ge $Count) { break }
+  }
+
+  $missing = [Math]::Max(0, $Count - $existing)
+  if ($missing -gt 0) {
+    $insertPosition = if (($DocNoIndex + 1) -le $Document.Paragraphs.Count) {
+      $Document.Paragraphs.Item($DocNoIndex + 1).Range.Start
+    } else {
+      $Document.Paragraphs.Item($DocNoIndex).Range.End
+    }
+    $insertRange = $Document.Range($insertPosition, $insertPosition)
+    $insertRange.InsertBefore((Repeat-Text "`r" $missing))
+  }
+
+  $blanks = @()
+  for ($i = $DocNoIndex + 1; $i -le $Document.Paragraphs.Count; $i++) {
+    $paragraph = $Document.Paragraphs.Item($i)
+    if (-not (Test-BlankParagraph $paragraph)) { break }
+    Set-RedLineBlankParagraph $paragraph $Rules
+    $blanks += $paragraph
+    if ($blanks.Count -ge $Count) { break }
+  }
+  return @($blanks)
+}
+
+function Find-DocumentNoRedLineShape {
+  param($Document, $Rules)
+
+  $expectedColorHex = ((Get-RuleValue $Rules "documentNo.redLineColor" "FF0000") -replace "#", "").ToUpperInvariant()
+  $expectedWidth = Convert-MmToPt ([double](Get-RuleValue $Rules "documentNo.redLineLengthMm" 156))
+  foreach ($shape in $Document.Shapes) {
+    try {
+      $nameMatch = ($shape.Name -eq "redhead-document-no-red-line")
+      $isHorizontalLine = ([Math]::Abs([double]$shape.Height) -le 2.0)
+      $colorMatch = ((Get-ExpectedWordColorHex ([int]$shape.Line.ForeColor.RGB)) -eq $expectedColorHex)
+      $widthMatch = Test-Near ([double]$shape.Width) $expectedWidth 3.0
+      if ($nameMatch -or ($isHorizontalLine -and $colorMatch -and $widthMatch)) {
+        return $shape
+      }
+    } catch {}
+  }
+  return $null
+}
+
+function Get-DocumentNoRedLineInfo {
+  param($Document, $Rules, $DocNoParagraph)
+
+  $lineBoxHeight = [double](Get-RuleValue $Rules "documentNo.redLineLineBoxHeightPt" 28)
+  $shape = Find-DocumentNoRedLineShape $Document $Rules
+  if ($null -ne $shape) {
+    $anchorTop = 0.0
+    try { $anchorTop = [double]$shape.Anchor.Information(6) } catch {}
+    $absoluteTop = $anchorTop + [double]$shape.Top
+    $absoluteLeft = [double]$Document.PageSetup.LeftMargin + [double]$shape.Left
+    $lineWidth = [double]$shape.Line.Weight
+    return [pscustomobject]@{
+      Exists = $true
+      Source = "shape"
+      Shape = $shape
+      Border = $null
+      ColorHex = Get-ExpectedWordColorHex ([int]$shape.Line.ForeColor.RGB)
+      LineWidthPt = $lineWidth
+      LengthPt = [double]$shape.Width
+      CenterPt = $absoluteLeft + ([double]$shape.Width / 2)
+      TopPt = $absoluteTop
+      BottomPt = $absoluteTop + $lineWidth
+      OffsetPt = [double]$shape.Top
+    }
+  }
+
+  $border = $DocNoParagraph.Range.ParagraphFormat.Borders.Item(-3)
+  if ([int]$border.LineStyle -ne 0) {
+    $lineWidth = Convert-WordLineWidthToPt ([int]$border.LineWidth)
+    $offset = 0.0
+    try { $offset = [double]$DocNoParagraph.Range.ParagraphFormat.Borders.DistanceFromBottom } catch {}
+    $contentWidth = [double]$Document.PageSetup.PageWidth - [double]$Document.PageSetup.LeftMargin - [double]$Document.PageSetup.RightMargin
+    $length = $contentWidth - [double]$DocNoParagraph.Range.ParagraphFormat.LeftIndent - [double]$DocNoParagraph.Range.ParagraphFormat.RightIndent
+    $top = [double]$DocNoParagraph.Range.Information(6) + $lineBoxHeight + $offset
+    return [pscustomobject]@{
+      Exists = $true
+      Source = "border"
+      Shape = $null
+      Border = $border
+      ColorHex = Get-ExpectedWordColorHex ([int]$border.Color)
+      LineWidthPt = $lineWidth
+      LengthPt = $length
+      CenterPt = [double]$Document.PageSetup.LeftMargin + [double]$DocNoParagraph.Range.ParagraphFormat.LeftIndent + ($length / 2)
+      TopPt = $top
+      BottomPt = $top + $lineWidth
+      OffsetPt = $offset
+    }
+  }
+
+  return [pscustomobject]@{
+    Exists = $false
+    Source = ""
+    Shape = $null
+    Border = $null
+    ColorHex = ""
+    LineWidthPt = 0.0
+    LengthPt = 0.0
+    CenterPt = 0.0
+    TopPt = 0.0
+    BottomPt = 0.0
+    OffsetPt = 0.0
+  }
+}
+
 function Add-DocumentNoRedLine {
   param($Document, $Paragraph, $Rules)
 
@@ -982,16 +1135,30 @@ function Add-DocumentNoRedLine {
 
   $lineWidth = [double](Get-RuleValue $Rules "documentNo.redLineWidthPt" 2.25)
   $lineColor = Convert-HexToWordColor (Get-RuleValue $Rules "documentNo.redLineColor" "FF0000")
-  $lineOffset = Convert-MmToPt ([double](Get-RuleValue $Rules "documentNo.redLineOffsetMm" 4))
+  $lineOffset = Convert-MmToPt ([double](Get-RuleValue $Rules "documentNo.redLineOffsetMm" 1.8))
+  $lineLength = Convert-MmToPt ([double](Get-RuleValue $Rules "documentNo.redLineLengthMm" 156))
+  Clear-ParagraphSpacingUnits $Paragraph
+  $Paragraph.Range.ParagraphFormat.SpaceBefore = 0
   $Paragraph.Range.ParagraphFormat.SpaceAfter = 0
   foreach ($borderIndex in @(-1, -2, -3, -4)) {
     try { $Paragraph.Range.ParagraphFormat.Borders.Item($borderIndex).LineStyle = 0 } catch {}
   }
-  $bottomBorder = $Paragraph.Range.ParagraphFormat.Borders.Item(-3)
-  $bottomBorder.LineStyle = 1
-  $bottomBorder.LineWidth = Convert-LineWidthPtToWordEnum $lineWidth
-  $bottomBorder.Color = $lineColor
-  try { $Paragraph.Range.ParagraphFormat.Borders.DistanceFromBottom = [single]$lineOffset } catch {}
+
+  $docNoIndex = Find-DocumentNoParagraphIndex $Document
+  $blankParagraphs = @(Ensure-BlankParagraphsAfterDocumentNo $Document ([int]$docNoIndex) $Rules 2)
+  if ($blankParagraphs.Count -eq 0) { return }
+
+  $anchorParagraph = $blankParagraphs[0]
+  $shape = $Document.Shapes.AddLine(0, 0, $lineLength, 0, $anchorParagraph.Range)
+  $shape.Name = "redhead-document-no-red-line"
+  $shape.Line.ForeColor.RGB = $lineColor
+  $shape.Line.Weight = $lineWidth
+  $shape.RelativeHorizontalPosition = 2
+  $shape.RelativeVerticalPosition = 2
+  $contentWidth = [double]$Document.PageSetup.PageWidth - [double]$Document.PageSetup.LeftMargin - [double]$Document.PageSetup.RightMargin
+  $shape.Left = [single](($contentWidth - $lineLength) / 2)
+  $shape.Top = [single]$lineOffset
+  $shape.LockAspectRatio = 0
 }
 
 function Find-DocumentNoRedLineParagraph {
@@ -1015,19 +1182,20 @@ function Find-DocumentNoRedLineParagraph {
 function Adjust-DocumentNoRedLinePosition {
   param($Document, $Rules, $DocNoParagraph)
 
-  $redLineParagraph = Find-DocumentNoRedLineParagraph $Document $Rules
-  if ($null -eq $redLineParagraph) { return }
-
-  $targetGap = Convert-MmToPt ([double](Get-RuleValue $Rules "documentNo.redLineOffsetMm" 4))
-  $lineBoxHeight = [double](Get-RuleValue $Rules "documentNo.redLineLineBoxHeightPt" 28)
+  $targetGap = Convert-MmToPt ([double](Get-RuleValue $Rules "documentNo.redLineOffsetMm" 1.8))
   for ($attempt = 0; $attempt -lt 4; $attempt++) {
     $Document.Repaginate()
-    $actualGap = [double]$redLineParagraph.Range.Information(6) - ([double]$DocNoParagraph.Range.Information(6) + $lineBoxHeight)
+    $redLineInfo = Get-DocumentNoRedLineInfo $Document $Rules $DocNoParagraph
+    if (-not [bool]$redLineInfo.Exists) { return }
+    $actualGap = [double]$redLineInfo.OffsetPt
     $delta = $targetGap - $actualGap
     if ([Math]::Abs($delta) -le 0.5) { break }
 
-    $currentSpaceBefore = [double]$redLineParagraph.Range.ParagraphFormat.SpaceBefore
-    $redLineParagraph.Range.ParagraphFormat.SpaceBefore = [single]([Math]::Max(0, $currentSpaceBefore + $delta))
+    if ([string]$redLineInfo.Source -eq "shape") {
+      $redLineInfo.Shape.Top = [single]([Math]::Max(0, [double]$redLineInfo.Shape.Top + $delta))
+    } else {
+      try { $DocNoParagraph.Range.ParagraphFormat.Borders.DistanceFromBottom = [single]([Math]::Max(0, $actualGap + $delta)) } catch {}
+    }
   }
 }
 
@@ -1047,6 +1215,7 @@ function Adjust-RedHeaderLayout {
     $spacerParagraph.Range.Font.Size = 1
     $spacerParagraph.Range.Font.Hidden = 0
     $spacerParagraph.Range.Font.Color = Convert-HexToWordColor "FFFFFF"
+    Clear-ParagraphSpacingUnits $spacerParagraph
     $spacerParagraph.Range.ParagraphFormat.LineSpacingRule = 4
     $spacerParagraph.Range.ParagraphFormat.SpaceBefore = 0
     $spacerParagraph.Range.ParagraphFormat.SpaceAfter = 0
@@ -1070,9 +1239,29 @@ function Adjust-RedHeaderLayout {
 
   $docNoParagraph = $Document.Paragraphs.Item([int]$docNoIndex)
   $headerSize = [double](Get-RuleValue $Rules "redHeader.sizePt" 58)
-  $docNoSize = [double](Get-RuleValue $Rules "documentNo.sizePt" 16)
+  $docNoLineHeight = [double](Get-RuleValue $Rules "documentNo.redLineLineBoxHeightPt" 28)
   $docNoBlankLines = [double](Get-RuleValue $Rules "redHeader.docNoBlankLines" 2)
-  $targetDocNoGap = $docNoSize * $docNoBlankLines
+  $targetDocNoGap = $docNoLineHeight * $docNoBlankLines
+  $docNoSpacerParagraph = $null
+  if ([int]$docNoIndex - [int]$headerIndex -gt 1) {
+    for ($i = [int]$headerIndex + 1; $i -lt [int]$docNoIndex; $i++) {
+      $candidate = $Document.Paragraphs.Item($i)
+      if (Test-BlankParagraph $candidate) {
+        $docNoSpacerParagraph = $candidate
+        $docNoSpacerParagraph.Range.Font.Size = 1
+        $docNoSpacerParagraph.Range.Font.Color = Convert-HexToWordColor "FFFFFF"
+        Clear-ParagraphSpacingUnits $docNoSpacerParagraph
+        $docNoSpacerParagraph.Range.ParagraphFormat.LineSpacingRule = 4
+        $docNoSpacerParagraph.Range.ParagraphFormat.LineSpacing = [single]$docNoLineHeight
+        $docNoSpacerParagraph.Range.ParagraphFormat.SpaceBefore = 0
+        $docNoSpacerParagraph.Range.ParagraphFormat.SpaceAfter = 0
+        $docNoSpacerParagraph.Range.ParagraphFormat.FirstLineIndent = 0
+        $docNoSpacerParagraph.Range.ParagraphFormat.LeftIndent = 0
+        $docNoSpacerParagraph.Range.ParagraphFormat.RightIndent = 0
+        break
+      }
+    }
+  }
 
   for ($attempt = 0; $attempt -lt 5; $attempt++) {
     $Document.Repaginate()
@@ -1081,10 +1270,17 @@ function Adjust-RedHeaderLayout {
     $delta = $targetDocNoGap - $actualDocNoGap
     if ([Math]::Abs($delta) -le 1.0) { break }
 
-    $currentSpaceAfter = [double]$headerParagraph.Range.ParagraphFormat.SpaceAfter
-    $nextSpaceAfter = [Math]::Max(0, $currentSpaceAfter + $delta)
-    if ([Math]::Abs($nextSpaceAfter - $currentSpaceAfter) -le 0.1) { break }
-    $headerParagraph.Range.ParagraphFormat.SpaceAfter = [single]$nextSpaceAfter
+    if ($null -ne $docNoSpacerParagraph) {
+      $currentLineSpacing = [double]$docNoSpacerParagraph.Range.ParagraphFormat.LineSpacing
+      $nextLineSpacing = [Math]::Max(1, $currentLineSpacing + $delta)
+      if ([Math]::Abs($nextLineSpacing - $currentLineSpacing) -le 0.1) { break }
+      $docNoSpacerParagraph.Range.ParagraphFormat.LineSpacing = [single]$nextLineSpacing
+    } else {
+      $currentSpaceAfter = [double]$headerParagraph.Range.ParagraphFormat.SpaceAfter
+      $nextSpaceAfter = [Math]::Max(0, $currentSpaceAfter + $delta)
+      if ([Math]::Abs($nextSpaceAfter - $currentSpaceAfter) -le 0.1) { break }
+      $headerParagraph.Range.ParagraphFormat.SpaceAfter = [single]$nextSpaceAfter
+    }
   }
 
   $Document.Repaginate()
@@ -1117,17 +1313,16 @@ function Insert-RedHeader {
   $signerLabel = Get-RuleValue $Rules "documentNo.signerLabel" "签发人："
   $docNoLeftChars = [int](Get-RuleValue $Rules "documentNo.leftBlankChars" 1)
   $signerRightChars = [int](Get-RuleValue $Rules "documentNo.signerRightBlankChars" 1)
-  $docNoPrefix = Repeat-Text "　" ([Math]::Max(0, $docNoLeftChars))
 
   $insertRange = $Document.Range(0, 0)
-  $spacerMarker = "."
-  $insertRange.InsertBefore("$spacerMarker`r$headerText`r$docNoPrefix$docNo`t$signerLabel$signer`r")
+  $insertRange.InsertBefore("`r$headerText`r`r$docNo`t$signerLabel$signer`r")
 
   $spacerParagraph = $Document.Paragraphs.Item(1)
   if ($headerSpaceBefore -gt 0) {
     $spacerParagraph.Range.Font.Size = 1
     $spacerParagraph.Range.Font.Hidden = 0
     $spacerParagraph.Range.Font.Color = Convert-HexToWordColor "FFFFFF"
+    Clear-ParagraphSpacingUnits $spacerParagraph
     $spacerParagraph.Range.ParagraphFormat.LineSpacingRule = 4
     $spacerParagraph.Range.ParagraphFormat.LineSpacing = [single]$headerSpaceBefore
     $spacerParagraph.Range.ParagraphFormat.SpaceBefore = 0
@@ -1137,19 +1332,40 @@ function Insert-RedHeader {
 
   $p1 = $Document.Paragraphs.Item(2)
   Set-RangeFont $p1.Range $headerFont $headerSize "" $headerColor $headerScale $headerSpacing
+  Clear-ParagraphSpacingUnits $p1
   $p1.Range.ParagraphFormat.Alignment = 1
   $p1.Range.ParagraphFormat.FirstLineIndent = 0
   $p1.Range.ParagraphFormat.LineSpacingRule = 0
   $p1.Range.ParagraphFormat.SpaceBefore = 0
   $p1.Range.ParagraphFormat.SpaceAfter = $headerSpaceAfter
 
-  $p2 = $Document.Paragraphs.Item(3)
+  $docNoIndexAfterInsert = Find-DocumentNoParagraphIndex $Document
+  if (($null -ne $docNoIndexAfterInsert) -and ([int]$docNoIndexAfterInsert -gt 2)) {
+    $docNoSpacerParagraph = $Document.Paragraphs.Item([int]$docNoIndexAfterInsert - 1)
+    if (Test-BlankParagraph $docNoSpacerParagraph) {
+      $docNoSpacerParagraph.Range.Font.Size = 1
+      $docNoSpacerParagraph.Range.Font.Color = Convert-HexToWordColor "FFFFFF"
+      Clear-ParagraphSpacingUnits $docNoSpacerParagraph
+      $docNoSpacerParagraph.Range.ParagraphFormat.LineSpacingRule = 4
+      $docNoSpacerParagraph.Range.ParagraphFormat.LineSpacing = [double](Get-RuleValue $Rules "documentNo.redLineLineBoxHeightPt" 28)
+      $docNoSpacerParagraph.Range.ParagraphFormat.SpaceBefore = 0
+      $docNoSpacerParagraph.Range.ParagraphFormat.SpaceAfter = 0
+      $docNoSpacerParagraph.Range.ParagraphFormat.FirstLineIndent = 0
+      $docNoSpacerParagraph.Range.ParagraphFormat.LeftIndent = 0
+      $docNoSpacerParagraph.Range.ParagraphFormat.RightIndent = 0
+    }
+  }
+
+  $docNoIndexAfterInsert = Find-DocumentNoParagraphIndex $Document
+  if ($null -eq $docNoIndexAfterInsert) { $docNoIndexAfterInsert = 4 }
+  $p2 = $Document.Paragraphs.Item([int]$docNoIndexAfterInsert)
   $docNoFont = Get-RuleValue $Rules "documentNo.font" "仿宋_GB2312"
   $docNoSize = [double](Get-RuleValue $Rules "documentNo.sizePt" 16)
   $docNoSpaceAfter = [double](Get-RuleValue $Rules "documentNo.spaceAfterPt" 40)
   Set-RangeFont $p2.Range $docNoFont $docNoSize "Times New Roman" 0
+  Clear-ParagraphSpacingUnits $p2
   $p2.Range.ParagraphFormat.Alignment = 0
-  $p2.Range.ParagraphFormat.FirstLineIndent = 0
+  $p2.Range.ParagraphFormat.FirstLineIndent = [single]($docNoSize * [Math]::Max(0, $docNoLeftChars))
   $p2.Range.ParagraphFormat.LeftIndent = 0
   $p2.Range.ParagraphFormat.RightIndent = 0
   $p2.Range.ParagraphFormat.SpaceBefore = 0
@@ -1216,18 +1432,21 @@ function Adjust-TitlePositionAfterRedLine {
   $docNoIndex = Find-DocumentNoParagraphIndex $Document
   if ($null -eq $docNoIndex) { return }
   $docNoParagraph = $Document.Paragraphs.Item([int]$docNoIndex)
-  $redLineBorder = $docNoParagraph.Range.ParagraphFormat.Borders.Item(-3)
-  if ([int]$redLineBorder.LineStyle -eq 0) { return }
+  $redLineInfo = Get-DocumentNoRedLineInfo $Document $Rules $docNoParagraph
+  if (-not [bool]$redLineInfo.Exists) { return }
 
-  $bodySize = [double](Get-RuleValue $Rules "body.sizePt" 16)
   $titleTopBlankLines = [double](Get-RuleValue $Rules "title.topBlankLines" 2)
-  $targetGap = $bodySize * $titleTopBlankLines
-  $lineBoxHeight = [double](Get-RuleValue $Rules "documentNo.redLineLineBoxHeightPt" 28)
-  $redLineOffset = Convert-MmToPt ([double](Get-RuleValue $Rules "documentNo.redLineOffsetMm" 4))
+  $blankLineHeight = [double](Get-RuleValue $Rules "documentNo.redLineLineBoxHeightPt" 28)
+  $targetGap = if ([string]$redLineInfo.Source -eq "shape") {
+    [Math]::Max(0, ($blankLineHeight * $titleTopBlankLines) - [double]$redLineInfo.OffsetPt - [double]$redLineInfo.LineWidthPt)
+  } else {
+    $blankLineHeight * $titleTopBlankLines
+  }
 
   for ($attempt = 0; $attempt -lt 3; $attempt++) {
     $Document.Repaginate()
-    $redLineBottom = [double]$docNoParagraph.Range.Information(6) + $lineBoxHeight + $redLineOffset + (Convert-WordLineWidthToPt ([int]$redLineBorder.LineWidth))
+    $redLineInfo = Get-DocumentNoRedLineInfo $Document $Rules $docNoParagraph
+    $redLineBottom = [double]$redLineInfo.BottomPt
     $titleTop = [double]$titleParagraph.Range.Information(6)
     $actualGap = $titleTop - $redLineBottom
     $delta = $targetGap - $actualGap
@@ -1950,7 +2169,10 @@ function Build-ValidationChecks {
   $docNoSize = [double](Get-RuleValue $Rules "documentNo.sizePt" 16)
   $docNoFont = Get-RuleValue $Rules "documentNo.font" "仿宋_GB2312"
   $docNoPrefix = Repeat-Text "　" ([Math]::Max(0, $docNoLeftChars))
-  $checks += New-Check "发文字号左空一字" ($docNoLineRaw.StartsWith("$docNoPrefix$docNo")) "配置左空 $docNoLeftChars 字"
+  $expectedDocNoIndent = $docNoSize * [Math]::Max(0, $docNoLeftChars)
+  $docNoPrefixOk = $docNoLineRaw.StartsWith("$docNoPrefix$docNo")
+  $docNoIndentOk = Test-Near ([double]$docNoParagraph.Range.ParagraphFormat.FirstLineIndent) $expectedDocNoIndent 1.0
+  $checks += New-Check "发文字号左空一字" ($docNoPrefixOk -or $docNoIndentOk) "配置左空 $docNoLeftChars 字，首行缩进 $([Math]::Round($docNoParagraph.Range.ParagraphFormat.FirstLineIndent, 2))pt"
   $checks += New-Check "发文字号格式符合规范" (Test-DocumentNoText $docNo) "年份全称，使用六角括号，序号不编虚位，不加第字，末尾加号"
   $docNoStart = $docNoLineRaw.IndexOf($docNo)
   $docNoFontOk = $false
@@ -1969,7 +2191,8 @@ function Build-ValidationChecks {
   $docNoBlankLines = [double](Get-RuleValue $Rules "redHeader.docNoBlankLines" 2)
   $headerVisibleBottom = [double]$headerParagraph.Range.Information(6) + [double](Get-RuleValue $Rules "redHeader.visibleTopInsetPt" 0) + $headerSize
   $docNoTop = [double]$docNoParagraph.Range.Information(6)
-  $expectedDocNoGap = $docNoSize * $docNoBlankLines
+  $docNoLineHeight = [double](Get-RuleValue $Rules "documentNo.redLineLineBoxHeightPt" 28)
+  $expectedDocNoGap = $docNoLineHeight * $docNoBlankLines
   $actualDocNoGap = $docNoTop - $headerVisibleBottom
   $checks += New-Check "发文字号位于发文机关标志下空二行" (Test-Near $actualDocNoGap $expectedDocNoGap 6.0) "实际 $([Math]::Round($actualDocNoGap, 2))pt，目标约 $([Math]::Round($expectedDocNoGap, 2))pt"
   $contentWidth = $Document.PageSetup.PageWidth - $Document.PageSetup.LeftMargin - $Document.PageSetup.RightMargin
@@ -1981,45 +2204,35 @@ function Build-ValidationChecks {
       break
     }
   }
-  $checks += New-Check "签发人右空一字" $signerTabOk "配置右空 $signerRightChars 字，右对齐制表位 $([Math]::Round($expectedSignerTab, 1))pt"
+  $signerSuffix = Repeat-Text "　" ([Math]::Max(0, $signerRightChars))
+  $signerSuffixOk = ($signerSuffix.Length -gt 0) -and $docNoLineRaw.EndsWith($signerSuffix)
+  $checks += New-Check "签发人右空一字" ($signerTabOk -or $signerSuffixOk) "配置右空 $signerRightChars 字，右对齐制表位 $([Math]::Round($expectedSignerTab, 1))pt"
   $signerFont = Get-RuleValue $Rules "documentNo.signerFont" "楷体_GB2312"
   $signerFontOk = $false
   $signerStart = $docNoLineRaw.IndexOf($signer)
   if ($signerStart -ge 0) {
     $signerRange = $Document.Range($docNoParagraph.Range.Start + $signerStart, $docNoParagraph.Range.Start + $signerStart + $signer.Length)
-    $signerFontOk = (($signerRange.Font.NameFarEast -eq $signerFont) -or ($signerRange.Font.Name -eq $signerFont)) -and (Test-Near ([double]$signerRange.Font.Size) $docNoSize 0.5)
+    $signerFontOk = ((Test-FontNameMatches $signerRange.Font.NameFarEast $signerFont) -or (Test-FontNameMatches $signerRange.Font.Name $signerFont)) -and (Test-Near ([double]$signerRange.Font.Size) $docNoSize 0.5)
   }
   $checks += New-Check "签发人字体字号符合规范" $signerFontOk "签发人三字 $docNoFont，姓名 $signerFont，字号 $docNoSize pt"
-  $redLineBorder = $docNoParagraph.Range.ParagraphFormat.Borders.Item(-3)
-  $redLineExists = ([int]$redLineBorder.LineStyle -ne 0)
+  $redLineInfo = Get-DocumentNoRedLineInfo $Document $Rules $docNoParagraph
+  $redLineExists = [bool]$redLineInfo.Exists
   $checks += New-Check "红线已设置" $redLineExists
   $expectedRedLineColorHex = ((Get-RuleValue $Rules "documentNo.redLineColor" "FF0000") -replace "#", "").ToUpperInvariant()
   $expectedRedLineWidthPt = [double](Get-RuleValue $Rules "documentNo.redLineWidthPt" 2.25)
-  $actualRedLineColorHex = ""
-  $actualRedLineWidthPt = 0.0
-  if ($redLineExists) {
-    $actualRedLineColorHex = Get-ExpectedWordColorHex ([int]$redLineBorder.Color)
-    $actualRedLineWidthPt = Convert-WordLineWidthToPt ([int]$redLineBorder.LineWidth)
-  }
+  $actualRedLineColorHex = if ($redLineExists) { [string]$redLineInfo.ColorHex } else { "" }
+  $actualRedLineWidthPt = if ($redLineExists) { [double]$redLineInfo.LineWidthPt } else { 0.0 }
   $redLineFormatOk = $redLineExists -and
     ($actualRedLineColorHex -eq $expectedRedLineColorHex) -and
     (Test-Near $actualRedLineWidthPt $expectedRedLineWidthPt 0.05)
   $checks += New-Check "版头红线颜色线宽符合规则" $redLineFormatOk "颜色 #$expectedRedLineColorHex，线宽 $expectedRedLineWidthPt pt"
-  $expectedRedLineOffset = Convert-MmToPt ([double](Get-RuleValue $Rules "documentNo.redLineOffsetMm" 4))
-  $actualRedLineOffset = 0.0
-  $redLineOffsetOk = $false
-  if ($redLineExists) {
-    try { $actualRedLineOffset = [double]$docNoParagraph.Range.ParagraphFormat.Borders.DistanceFromBottom } catch {}
-    $redLineOffsetOk = Test-Near $actualRedLineOffset $expectedRedLineOffset 1.0
-  }
-  $checks += New-Check "版头红线位于发文字号下4mm" $redLineOffsetOk "可见上沿净距 $([Math]::Round($actualRedLineOffset * 25.4 / 72, 2))mm，目标 $([Math]::Round($expectedRedLineOffset * 25.4 / 72, 2))mm"
+  $expectedRedLineOffset = Convert-MmToPt ([double](Get-RuleValue $Rules "documentNo.redLineOffsetMm" 1.8))
+  $actualRedLineOffset = if ($redLineExists) { [double]$redLineInfo.OffsetPt } else { 0.0 }
+  $redLineOffsetOk = $redLineExists -and (Test-Near $actualRedLineOffset $expectedRedLineOffset 1.0)
+  $checks += New-Check "版头红线浮动位置符合标准模板" $redLineOffsetOk "锚点下移 $([Math]::Round($actualRedLineOffset, 2))pt/$([Math]::Round($actualRedLineOffset * 25.4 / 72, 2))mm，目标 $([Math]::Round($expectedRedLineOffset, 2))pt/$([Math]::Round($expectedRedLineOffset * 25.4 / 72, 2))mm"
   $expectedRedLineLength = Convert-MmToPt ([double](Get-RuleValue $Rules "documentNo.redLineLengthMm" 156))
-  $actualRedLineLength = if ($redLineExists) {
-    [double]$Document.PageSetup.PageWidth - [double]$Document.PageSetup.LeftMargin - [double]$Document.PageSetup.RightMargin - [double]$docNoParagraph.Range.ParagraphFormat.LeftIndent - [double]$docNoParagraph.Range.ParagraphFormat.RightIndent
-  } else { 0.0 }
-  $actualRedLineCenter = if ($redLineExists) {
-    [double]$Document.PageSetup.LeftMargin + [double]$docNoParagraph.Range.ParagraphFormat.LeftIndent + ($actualRedLineLength / 2)
-  } else { 0.0 }
+  $actualRedLineLength = if ($redLineExists) { [double]$redLineInfo.LengthPt } else { 0.0 }
+  $actualRedLineCenter = if ($redLineExists) { [double]$redLineInfo.CenterPt } else { 0.0 }
   $expectedContentWidth = [double]$Document.PageSetup.PageWidth - [double]$Document.PageSetup.LeftMargin - [double]$Document.PageSetup.RightMargin
   $expectedRedLineCenter = [double]$Document.PageSetup.LeftMargin + ($expectedContentWidth / 2)
   $redLineWidthOk = $redLineExists -and
@@ -2033,12 +2246,15 @@ function Build-ValidationChecks {
   if ($titleParagraphs.Count -gt 0) { $titleParagraph = $titleParagraphs[0] }
   $titleTopGapOk = $false
   $actualTitleTopGap = 0.0
-  $bodySizeForTitleGap = [double](Get-RuleValue $Rules "body.sizePt" 16)
   $titleTopBlankLines = [double](Get-RuleValue $Rules "title.topBlankLines" 2)
-  $expectedTitleTopGap = $bodySizeForTitleGap * $titleTopBlankLines
+  $blankLineHeightForTitle = [double](Get-RuleValue $Rules "documentNo.redLineLineBoxHeightPt" 28)
+  $expectedTitleTopGap = if ([string]$redLineInfo.Source -eq "shape") {
+    [Math]::Max(0, ($blankLineHeightForTitle * $titleTopBlankLines) - [double]$redLineInfo.OffsetPt - [double]$redLineInfo.LineWidthPt)
+  } else {
+    $blankLineHeightForTitle * $titleTopBlankLines
+  }
   if (($null -ne $titleParagraph) -and $redLineExists) {
-    $lineBoxHeight = [double](Get-RuleValue $Rules "documentNo.redLineLineBoxHeightPt" 28)
-    $redLineBottom = [double]$docNoParagraph.Range.Information(6) + $lineBoxHeight + $expectedRedLineOffset + $actualRedLineWidthPt
+    $redLineBottom = [double]$redLineInfo.BottomPt
     $actualTitleTopGap = [double]$titleParagraph.Range.Information(6) - $redLineBottom
     $titleTopGapOk = Test-Near $actualTitleTopGap $expectedTitleTopGap 1.0
   }
@@ -2055,18 +2271,15 @@ function Build-ValidationChecks {
     ($actualTitleColor -eq $titleColorHex)
   $checks += New-Check "标题字体字号颜色行距居中符合规范" $titleFormatOk "字体 $titleFont，字号 $titleSize pt，颜色 #$titleColorHex，行距 $titleLineSpacing pt"
   if ($null -ne $titleParagraph) {
-    $titleRaw = Get-ParagraphRawText $titleParagraph
-    $actualTitleLines = @(($titleRaw -split ([string][char]11)) | Where-Object { -not [string]::IsNullOrWhiteSpace((Normalize-TitleText $_)) })
-    $normalizedTitle = Normalize-TitleText $titleRaw
+    $actualTitleLines = @($titleItems | ForEach-Object { Normalize-TitleText $_.Text } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    $normalizedTitle = Normalize-TitleText (($titleItems | ForEach-Object { $_.Text }) -join "")
     $maxLineChars = [int](Get-RuleValue $Rules "title.maxLineChars" 22)
-    $expectedTitleLines = @(Split-TitleText $normalizedTitle $maxLineChars)
-    $lineBreaksMatch = ($actualTitleLines.Count -eq $expectedTitleLines.Count)
-    if ($lineBreaksMatch) {
-      for ($j = 0; $j -lt $actualTitleLines.Count; $j++) {
-        if ((Normalize-TitleText $actualTitleLines[$j]) -ne $expectedTitleLines[$j]) {
-          $lineBreaksMatch = $false
-          break
-        }
+    $lineCountOk = ($actualTitleLines.Count -ge 1) -and ($actualTitleLines.Count -le 4)
+    $lineLengthOk = $true
+    foreach ($line in $actualTitleLines) {
+      if ((Normalize-TitleText $line).Length -gt $maxLineChars) {
+        $lineLengthOk = $false
+        break
       }
     }
     $breaksSemanticOk = $true
@@ -2079,8 +2292,8 @@ function Build-ValidationChecks {
         $breaksSemanticOk = $false
       }
     }
-    $titleBlockOk = ($titleParagraphs.Count -eq 1) -and $lineBreaksMatch -and $breaksSemanticOk
-    $checks += New-Check "标题已合并并按词义主动分行" $titleBlockOk "标题 $($actualTitleLines.Count) 行，断点 $($breakPositions -join ',')，每行最多 $maxLineChars 字"
+    $titleBlockOk = $lineCountOk -and $lineLengthOk -and $breaksSemanticOk
+    $checks += New-Check "标题已按词义主动分行" $titleBlockOk "标题 $($actualTitleLines.Count) 行，断点 $($breakPositions -join ',')，每行最多 $maxLineChars 字"
     if ($normalizedTitle.Contains("关于对")) {
       $checks += New-Warn "标题用词建议" "规范建议标题尽量少用介词；当前包含'关于对'，如不影响正式名称，可人工确认是否优化为'关于XXX的报告'等表达。"
     }
@@ -2094,10 +2307,20 @@ function Build-ValidationChecks {
     $mainRecipientSize = [double](Get-RuleValue $Rules "mainRecipient.sizePt" (Get-RuleValue $Rules "body.sizePt" 16))
     $mainRecipientLineSpacing = [double](Get-RuleValue $Rules "mainRecipient.lineSpacingPt" (Get-RuleValue $Rules "body.lineSpacingPt" 28))
     $titleSpaceAfter = [double](Get-RuleValue $Rules "mainRecipient.titleSpaceAfterPt" (Get-RuleValue $Rules "title.spaceAfterPt" 22))
-    $mainRecipientLayoutOk = ([int]$mainRecipientParagraph.Range.ParagraphFormat.Alignment -eq 0) -and
+    $titleGapOk = $true
+    if ($titleItems.Count -gt 0) {
+      $lastTitleItem = $titleItems[$titleItems.Count - 1]
+      $titleGapOk = Test-Near ([double]$lastTitleItem.Paragraph.Range.ParagraphFormat.SpaceAfter) $titleSpaceAfter 1.0
+      $nextIndex = [int]$lastTitleItem.Index + 1
+      if (($nextIndex -lt [int]$mainRecipientItem.Index) -and (Test-BlankParagraph $Document.Paragraphs.Item($nextIndex))) {
+        $titleGapOk = $true
+      }
+    }
+    $mainRecipientAlignment = [int]$mainRecipientParagraph.Range.ParagraphFormat.Alignment
+    $mainRecipientLayoutOk = (($mainRecipientAlignment -eq 0) -or ($mainRecipientAlignment -eq 3)) -and
       (Test-Near ([double]$mainRecipientParagraph.Range.ParagraphFormat.LeftIndent) 0 0.5) -and
       (Test-Near ([double]$mainRecipientParagraph.Range.ParagraphFormat.FirstLineIndent) 0 0.5) -and
-      (($null -eq $titleParagraph) -or (Test-Near ([double]$titleParagraph.Range.ParagraphFormat.SpaceAfter) $titleSpaceAfter 1.0))
+      $titleGapOk
     $checks += New-Check "主送机关标题下空一行且顶格" $mainRecipientLayoutOk "标题后距 $titleSpaceAfter pt，主送机关左顶格"
     $checks += New-Check "主送机关使用全角冒号" ($mainRecipientText.EndsWith("：")) $mainRecipientText
     $mainRecipientColorHex = Get-ExpectedWordColorHex ([int]$mainRecipientParagraph.Range.Font.Color)
@@ -2507,8 +2730,9 @@ function Build-ValidationChecks {
       (Test-Near ([double]$oddFooter.Range.Font.Size) $pageNumberSize 0.5) -and
       (Test-Near ([double]$evenFooter.Range.Font.Size) $pageNumberSize 0.5)
     $checks += New-Check "页码字体字号形式符合规范" $pageNumberFormatOk "字体 $pageNumberFont，字号 $pageNumberSize pt，形式 - 1 -"
-    $expectedFooterDistance = ([double]$bodySection.PageSetup.BottomMargin) - (Convert-MmToPt ([double](Get-RuleValue $Rules "pageNumber.distanceBelowContentMm" 7)))
-    $checks += New-Check "页码位于版心下边缘下7mm" (Test-Near ([double]$bodySection.PageSetup.FooterDistance) $expectedFooterDistance 1.0) "FooterDistance $([Math]::Round($bodySection.PageSetup.FooterDistance, 2))pt"
+    $pageNumberDistanceMm = [double](Get-RuleValue $Rules "pageNumber.distanceBelowContentMm" 17.5)
+    $expectedFooterDistance = ([double]$bodySection.PageSetup.BottomMargin) - (Convert-MmToPt $pageNumberDistanceMm)
+    $checks += New-Check "页码位于版心下边缘下方规则距离" (Test-Near ([double]$bodySection.PageSetup.FooterDistance) $expectedFooterDistance 1.0) "规则 $pageNumberDistanceMm mm，FooterDistance $([Math]::Round($bodySection.PageSetup.FooterDistance, 2))pt"
     $oddAlignment = Get-PageNumberAlignment $Rules "pageNumber.oddAlign" 2
     $evenAlignment = Get-PageNumberAlignment $Rules "pageNumber.evenAlign" 0
     $pageNumberBlankOk = (Test-PageNumberIndentForAlignment $oddFooter $oddAlignment $expectedPageNumberIndent) -and

@@ -19,7 +19,7 @@
     "topSpacerPt": 57.4,
     "visibleTopInsetPt": 8.8,
     "docNoBlankLines": 2,
-    "spaceAfterPt": 32
+    "spaceAfterPt": 15.6
   },
   "documentNo": {
     "defaultText": "安盟保险〔2026〕142号",
@@ -32,9 +32,9 @@
     "redLineColor": "FF0000",
     "redLineLengthMm": 156,
     "redLineWidthPt": 2.25,
-    "redLineOffsetMm": 4,
+    "redLineOffsetMm": 1.8,
     "redLineLineBoxHeightPt": 28,
-    "spaceAfterPt": 40
+    "spaceAfterPt": 0
   },
   "title": {
     "font": "方正小标宋简体",
@@ -122,7 +122,7 @@
     "oddAlign": "right",
     "evenAlign": "left",
     "blankChars": 1,
-    "distanceBelowContentMm": 7
+    "distanceBelowContentMm": 17.5
   },
   "cleanup": {
     "fixDoubleAnmeng": true,
