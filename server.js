@@ -251,10 +251,11 @@ function enqueue(task) {
   return run;
 }
 
-function readJsonIfExists(filePath) {
-  if (!filePath || !fs.existsSync(filePath)) return null;
+async function readJsonIfExists(filePath) {
+  if (!filePath) return null;
   try {
-    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+    const raw = await fsp.readFile(filePath, "utf8");
+    return JSON.parse(raw);
   } catch {
     return null;
   }
@@ -315,8 +316,8 @@ function runPowerShell(args, cwd, options = {}) {
     const timeoutMs = options.timeoutMs || JOB_TIMEOUT_MS;
     const timer = setTimeout(() => {
       timedOut = true;
-      cleanupTimedOutWordJob(child.pid, options, startedAt);
-      setTimeout(() => cleanupTimedOutWordJob(null, options, startedAt), 3000).unref?.();
+      cleanupTimedOutWordJob(child.pid, options);
+      setTimeout(() => cleanupTimedOutWordJob(null, options), 3000).unref?.();
     }, timeoutMs);
     child.stdout.on("data", (chunk) => {
       stdout += chunk.toString("utf8");
@@ -328,9 +329,9 @@ function runPowerShell(args, cwd, options = {}) {
       clearTimeout(timer);
       reject(error);
     });
-    child.on("close", (code) => {
+    child.on("close", async (code) => {
       clearTimeout(timer);
-      const status = readJsonIfExists(options.statusPath);
+      const status = await readJsonIfExists(options.statusPath);
       const diagnostics = {
         startedAt: startedAt.toISOString(),
         finishedAt: new Date().toISOString(),
@@ -339,9 +340,9 @@ function runPowerShell(args, cwd, options = {}) {
         timeoutMs,
         status
       };
-      writeProcessLog(options.logPath, stdout, stderr, diagnostics);
+      await writeProcessLog(options.logPath, stdout, stderr, diagnostics);
       if (timedOut) {
-        cleanupTimedOutWordJob(null, options, startedAt);
+        await cleanupTimedOutWordJob(null, options);
         const statusDetail = describeJobStatus(status);
         const suffix = statusDetail ? `。${statusDetail}` : "";
         const error = new Error(`处理超时，已终止本次 Word 任务（${Math.round(timeoutMs / 1000)} 秒）${suffix}`);
@@ -366,7 +367,7 @@ function runPowerShell(args, cwd, options = {}) {
   });
 }
 
-function writeProcessLog(logPath, stdout, stderr, diagnostics = null) {
+async function writeProcessLog(logPath, stdout, stderr, diagnostics = null) {
   if (!logPath) return;
   const sections = [
     `[diagnostics]`,
@@ -378,7 +379,7 @@ function writeProcessLog(logPath, stdout, stderr, diagnostics = null) {
   ];
   const text = sections.join("\n");
   try {
-    fs.writeFileSync(logPath, text, "utf8");
+    await fsp.writeFile(logPath, text, "utf8");
   } catch {
     // Logging should not mask the real processing result.
   }
@@ -389,43 +390,32 @@ function killProcessTree(pid) {
   spawnSync("taskkill.exe", ["/PID", String(pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" });
 }
 
-function cleanupTimedOutWordJob(childPid, options, startedAt) {
+async function cleanupTimedOutWordJob(childPid, options) {
   killProcessTree(childPid);
-  cleanupWordProcess(options.pidPath);
-  cleanupWordProcessFromStatus(options.statusPath);
-  cleanupRecentWordProcesses(startedAt);
-}
-
-function cleanupWordProcess(pidPath) {
-  if (!pidPath || !fs.existsSync(pidPath)) return;
-  try {
-    const info = JSON.parse(fs.readFileSync(pidPath, "utf8"));
-    if (info.wordPid) {
-      spawnSync("taskkill.exe", ["/PID", String(info.wordPid), "/F"], { windowsHide: true, stdio: "ignore" });
-    }
-  } catch {
-    // Best-effort cleanup; the job result will still report the timeout.
+  const seen = new Set();
+  for (const pid of await collectJobWordPids(options)) {
+    if (seen.has(pid)) continue;
+    seen.add(pid);
+    killWordProcessByPid(pid);
   }
 }
 
-function cleanupWordProcessFromStatus(statusPath) {
-  const status = readJsonIfExists(statusPath);
-  if (!status || !status.wordPid) return;
-  spawnSync("taskkill.exe", ["/PID", String(status.wordPid), "/F"], { windowsHide: true, stdio: "ignore" });
+async function collectJobWordPids(options) {
+  const pids = [];
+  const fromPidFile = await readJsonIfExists(options.pidPath);
+  if (fromPidFile && fromPidFile.wordPid) pids.push(Number(fromPidFile.wordPid));
+  const fromStatus = await readJsonIfExists(options.statusPath);
+  if (fromStatus && fromStatus.wordPid) pids.push(Number(fromStatus.wordPid));
+  return pids.filter((pid) => Number.isInteger(pid) && pid > 0);
 }
 
-function cleanupRecentWordProcesses(startedAt) {
-  const cutoff = new Date(startedAt.getTime() - 5000).toISOString();
-  const command = [
-    `$cutoff = [datetime]::Parse('${cutoff}')`,
-    `Get-Process WINWORD -ErrorAction SilentlyContinue |`,
-    `Where-Object { $_.StartTime -ge $cutoff } |`,
-    `Stop-Process -Force -ErrorAction SilentlyContinue`
-  ].join(" ");
-  spawnSync(getPowerShellExecutable(), ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command], {
-    windowsHide: true,
-    stdio: "ignore"
-  });
+function killWordProcessByPid(pid) {
+  // /FI 过滤镜像名，PID 被系统回收复用到其它进程时不会误杀。
+  spawnSync(
+    "taskkill.exe",
+    ["/PID", String(pid), "/F", "/FI", "IMAGENAME eq WINWORD.EXE"],
+    { windowsHide: true, stdio: "ignore" }
+  );
 }
 
 function getPowerShellExecutable() {
@@ -504,9 +494,9 @@ async function processDocument(body, contentType) {
     pidPath,
     "-StatusPath",
     statusPath
-  ], ROOT, { timeoutMs: JOB_TIMEOUT_MS, pidPath, logPath: processLogPath, statusPath }).catch((error) => {
+  ], ROOT, { timeoutMs: JOB_TIMEOUT_MS, pidPath, logPath: processLogPath, statusPath }).catch(async (error) => {
     error.jobId = jobId;
-    error.status = error.status || readJsonIfExists(statusPath);
+    error.status = error.status || (await readJsonIfExists(statusPath));
     error.downloads = {
       log: `/jobs/${jobId}/${encodeURIComponent(path.basename(processLogPath))}`,
       status: `/jobs/${jobId}/${encodeURIComponent(path.basename(statusPath))}`
@@ -529,7 +519,7 @@ async function processDocument(body, contentType) {
     log: `/jobs/${jobId}/${encodeURIComponent(path.basename(processLogPath))}`,
     status: `/jobs/${jobId}/${encodeURIComponent(path.basename(statusPath))}`
   };
-  result.status = readJsonIfExists(statusPath);
+  result.status = await readJsonIfExists(statusPath);
   return result;
   } finally {
     activeJobIds.delete(jobId);
