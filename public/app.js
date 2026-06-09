@@ -4,8 +4,11 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const state = {
   rules: null,
   ruleVersions: [],
-  latestResult: null
+  latestResult: null,
+  selectedFile: null
 };
+
+const WORD_FILE_PATTERN = /\.(doc|docx)$/i;
 
 function getByPath(object, path) {
   return path.split(".").reduce((value, key) => (value == null ? undefined : value[key]), object);
@@ -261,6 +264,26 @@ function formatBytes(bytes) {
   return `${(value / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
+function isSupportedWordFile(file) {
+  return Boolean(file?.name && WORD_FILE_PATTERN.test(file.name));
+}
+
+function updateSelectedFile(file) {
+  state.selectedFile = file || null;
+  $("#fileName").textContent = file ? `${file.name} · ${formatBytes(file.size)}` : "选择 Word 文件";
+}
+
+function setInputFiles(input, file) {
+  if (!file || typeof DataTransfer === "undefined") return;
+  try {
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    input.files = transfer.files;
+  } catch {
+    // Some browser shells keep file inputs read-only; state.selectedFile still handles submit.
+  }
+}
+
 function collectCleanupOptions() {
   return {
     retentionDays: Number($("#cleanupRetentionDays").value),
@@ -355,28 +378,79 @@ function renderHistory() {
   });
 }
 
+function describeProgress(status) {
+  if (!status) return "处理中";
+  const stage = status.stage || "处理中";
+  const detail = status.detail || "";
+  const elapsedSec = Number.isFinite(Number(status.elapsedMs)) ? Math.round(Number(status.elapsedMs) / 1000) : null;
+  const tail = elapsedSec !== null ? `（已耗时 ${elapsedSec} 秒）` : "";
+  return detail ? `${stage}：${detail}${tail}` : `${stage}${tail}`;
+}
+
+function buildProgressChecks(status) {
+  const checks = [{ Label: "任务已提交到本地 Word", Status: "pass" }];
+  if (status?.stage) {
+    checks.push({
+      Label: `当前阶段：${status.stage}`,
+      Status: "warn",
+      Detail: status.detail || ""
+    });
+  }
+  if (status?.wordPid) {
+    checks.push({ Label: `Word PID ${status.wordPid}`, Status: "warn" });
+  }
+  return checks;
+}
+
 async function processDocument(event) {
   event.preventDefault();
   const input = $("#wordFile");
-  if (!input.files.length) {
+  const file = state.selectedFile || input.files[0];
+  if (!file) {
     setStatus("请选择 Word 文件", [{ Label: "未选择文件", Status: "warn" }]);
     return;
   }
 
   const formData = new FormData();
-  formData.append("file", input.files[0]);
+  formData.append("file", file);
   formData.append("meta", JSON.stringify(buildMeta()));
 
   setBusy(true, "Word 正在套红并导出 PDF");
   setStatus("处理中", [{ Label: "任务已提交到本地 Word", Status: "pass" }]);
+
+  let eventSource = null;
+  const closeEvents = () => {
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
+  };
 
   try {
     const response = await fetch("/api/process", {
       method: "POST",
       body: formData
     });
+    const jobId = response.headers.get("X-Job-Id");
+    if (jobId && typeof EventSource !== "undefined") {
+      eventSource = new EventSource(`/api/jobs/${encodeURIComponent(jobId)}/events`);
+      eventSource.addEventListener("status", (ev) => {
+        try {
+          const status = JSON.parse(ev.data);
+          setBusy(true, describeProgress(status));
+          setStatus("处理中", buildProgressChecks(status));
+        } catch {
+          // 无效负载忽略
+        }
+      });
+      eventSource.addEventListener("done", () => closeEvents());
+      eventSource.addEventListener("error", () => closeEvents());
+    }
     const result = await response.json().catch(() => ({}));
-    if (!response.ok || result.ok === false) {
+    closeEvents();
+    // 因为 X-Job-Id 已通过 flushHeaders 把状态码定为 200，错误也在 200 通道里返回，
+    // 必须同时检查 result.error / result.ok 才能识别失败。
+    if (!response.ok || result.ok === false || result.error) {
       const error = new Error(result.error || "处理失败");
       error.result = result;
       throw error;
@@ -386,8 +460,10 @@ async function processDocument(event) {
     setStatus(result.validationPassed === false ? "处理完成，存在未通过校验" : "处理完成", result.checks || []);
     saveHistoryItem(result);
   } catch (error) {
+    closeEvents();
     setStatus(error.message, buildFailureChecks(error.result));
   } finally {
+    closeEvents();
     setBusy(false);
   }
 }
@@ -401,9 +477,49 @@ function bindEvents() {
   $$(".tab").forEach((button) => {
     button.addEventListener("click", () => switchTab(button.dataset.tab));
   });
-  $("#wordFile").addEventListener("change", (event) => {
+  const fileDrop = $(".file-drop");
+  const wordFileInput = $("#wordFile");
+  let dragDepth = 0;
+
+  wordFileInput.addEventListener("change", (event) => {
     const file = event.target.files[0];
-    $("#fileName").textContent = file ? file.name : "选择 Word 文件";
+    if (file && !isSupportedWordFile(file)) {
+      event.target.value = "";
+      updateSelectedFile(null);
+      setStatus("仅支持 Word 文件", [{ Label: file.name, Status: "fail", Detail: "请上传 .doc 或 .docx 文件" }]);
+      return;
+    }
+    updateSelectedFile(file);
+  });
+
+  ["dragenter", "dragover"].forEach((type) => {
+    fileDrop.addEventListener(type, (event) => {
+      event.preventDefault();
+      if (type === "dragenter") dragDepth += 1;
+      fileDrop.classList.add("dragging");
+      event.dataTransfer.dropEffect = "copy";
+    });
+  });
+
+  fileDrop.addEventListener("dragleave", (event) => {
+    event.preventDefault();
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) fileDrop.classList.remove("dragging");
+  });
+
+  fileDrop.addEventListener("drop", (event) => {
+    event.preventDefault();
+    dragDepth = 0;
+    fileDrop.classList.remove("dragging");
+
+    const file = Array.from(event.dataTransfer.files || []).find(isSupportedWordFile);
+    if (!file) {
+      setStatus("仅支持 Word 文件", [{ Label: "拖拽文件无效", Status: "fail", Detail: "请拖入 .doc 或 .docx 文件" }]);
+      return;
+    }
+    setInputFiles(wordFileInput, file);
+    updateSelectedFile(file);
+    setStatus("文件已选择", [{ Label: file.name, Status: "pass", Detail: formatBytes(file.size) }]);
   });
   $("#processForm").addEventListener("submit", processDocument);
   $("#saveRulesBtn").addEventListener("click", saveRules);

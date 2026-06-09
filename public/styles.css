@@ -235,10 +235,23 @@ textarea {
   min-height: 82px;
   padding: 18px;
   text-align: center;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .file-drop input {
   display: none;
+}
+
+.file-drop small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.file-drop.dragging {
+  background: rgba(196, 22, 28, 0.11);
+  border-color: var(--red);
+  box-shadow: 0 0 0 4px rgba(196, 22, 28, 0.12);
+  transform: translateY(-1px);
 }
 
 .check-row {

@@ -193,6 +193,16 @@ test("前端和服务端 JS 语法通过", () => {
   run(process.execPath, ["--check", "scripts/generate-rule-coverage-doc.js"]);
 });
 
+test("工作台支持拖拽上传 Word 文件", () => {
+  const html = readText("public/index.html");
+  const app = readText("public/app.js");
+  const css = readText("public/styles.css");
+  assert(html.includes("支持拖入 .doc / .docx 文件"), "上传区缺少拖拽提示");
+  assert(app.includes("dragenter") && app.includes("drop"), "上传区缺少拖拽事件绑定");
+  assert(app.includes("isSupportedWordFile"), "上传区缺少 Word 文件类型校验");
+  assert(css.includes(".file-drop.dragging"), "上传区缺少拖入高亮样式");
+});
+
 test("任务产物清理策略支持预览和执行", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "redhead-cleanup-"));
   const outputDir = path.join(root, "output");

@@ -81,6 +81,11 @@ async function ensureDirs() {
 
 function sendJson(res, status, payload) {
   const body = JSON.stringify(payload, null, 2);
+  if (res.headersSent) {
+    // X-Job-Id 已通过 flushHeaders 提前下发，状态码已经写入。这里只补 body。
+    res.end(body);
+    return;
+  }
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store"
@@ -511,7 +516,7 @@ function commandExists(command) {
   return result.status === 0;
 }
 
-async function processDocument(body, contentType) {
+async function processDocument(body, contentType, onJobId) {
   const { fields, files } = parseMultipart(body, contentType);
   const upload = files.file;
   if (!upload) throw new Error("没有收到 Word 文件");
@@ -521,6 +526,9 @@ async function processDocument(body, contentType) {
 
   const jobId = `${new Date().toISOString().replace(/[-:.TZ]/g, "")}-${crypto.randomBytes(3).toString("hex")}`;
   activeJobIds.add(jobId);
+  if (typeof onJobId === "function") {
+    try { onJobId(jobId); } catch { /* swallow callback errors */ }
+  }
   try {
   const uploadJobDir = path.join(UPLOAD_DIR, jobId);
   const outputJobDir = path.join(OUTPUT_DIR, jobId);
@@ -620,6 +628,80 @@ async function serveStatic(req, res, pathname) {
   }
 }
 
+async function streamJobEvents(req, res, jobId) {
+  const safeJobId = sanitizeFileName(decodeURIComponent(jobId));
+  const jobDir = path.resolve(OUTPUT_DIR, safeJobId);
+  if (!jobDir.startsWith(path.resolve(OUTPUT_DIR))) {
+    sendText(res, 403, "Forbidden");
+    return;
+  }
+  const statusPath = path.join(jobDir, "job-status.json");
+  const resultPath = path.join(jobDir, "result.json");
+
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-store",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no"
+  });
+  res.flushHeaders?.();
+  res.write(`retry: 2000\n\n`);
+
+  const send = (event, data) => {
+    if (res.writableEnded) return;
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  let lastStatusMtime = 0;
+  let lastStatusJson = "";
+  let closed = false;
+  const heartbeat = setInterval(() => {
+    if (!res.writableEnded) res.write(`: ping\n\n`);
+  }, 15000);
+  heartbeat.unref?.();
+
+  const finish = (event, data) => {
+    if (closed) return;
+    closed = true;
+    clearInterval(heartbeat);
+    clearInterval(poller);
+    if (event && !res.writableEnded) send(event, data || {});
+    if (!res.writableEnded) res.end();
+  };
+
+  req.on("close", () => finish());
+
+  const poll = async () => {
+    if (closed) return;
+    try {
+      const stat = await fsp.stat(statusPath).catch(() => null);
+      if (stat && stat.mtimeMs !== lastStatusMtime) {
+        lastStatusMtime = stat.mtimeMs;
+        const status = await readJsonIfExists(statusPath);
+        if (status) {
+          const json = JSON.stringify(status);
+          if (json !== lastStatusJson) {
+            lastStatusJson = json;
+            send("status", status);
+          }
+        }
+      }
+      const resultStat = await fsp.stat(resultPath).catch(() => null);
+      if (resultStat) {
+        const result = await readJsonIfExists(resultPath);
+        finish("done", result || {});
+      }
+    } catch {
+      // best-effort polling
+    }
+  };
+
+  const poller = setInterval(poll, 300);
+  poller.unref?.();
+  poll();
+}
+
 async function serveJobFile(req, res, pathname) {
   const match = pathname.match(/^\/jobs\/([^/]+)\/(.+)$/);
   if (!match) {
@@ -699,9 +781,25 @@ async function handle(req, res) {
 
     if (req.method === "POST" && pathname === "/api/process") {
       const body = await readRequestBody(req);
-      const result = await enqueue(() => processDocument(body, req.headers["content-type"] || ""));
+      let headersFlushed = false;
+      const onJobId = (jobId) => {
+        if (headersFlushed || res.headersSent) return;
+        headersFlushed = true;
+        res.setHeader("X-Job-Id", jobId);
+        res.setHeader("Access-Control-Expose-Headers", "X-Job-Id");
+        if (typeof res.flushHeaders === "function") res.flushHeaders();
+      };
+      const result = await enqueue(() => processDocument(body, req.headers["content-type"] || "", onJobId));
       sendJson(res, 200, result);
       return;
+    }
+
+    if (req.method === "GET" && pathname.startsWith("/api/jobs/") && pathname.endsWith("/events")) {
+      const match = pathname.match(/^\/api\/jobs\/([^/]+)\/events$/);
+      if (match) {
+        await streamJobEvents(req, res, sanitizeFileName(decodeURIComponent(match[1])));
+        return;
+      }
     }
 
     if (req.method === "GET" && pathname.startsWith("/jobs/")) {
