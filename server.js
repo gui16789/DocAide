@@ -20,6 +20,7 @@ const RULES_SCHEMA_PATH = path.join(DATA_DIR, "rules.schema.json");
 const JOB_TIMEOUT_MS = Number(process.env.REDHEAD_JOB_TIMEOUT_MS || 300000);
 const CLEANUP_ON_START = process.env.REDHEAD_CLEANUP_ON_START !== "0";
 const CLEANUP_AFTER_JOB = process.env.REDHEAD_CLEANUP_AFTER_JOB !== "0";
+const PROCESS_LOG_TAIL_BYTES = Number(process.env.REDHEAD_LOG_TAIL_BYTES || 64 * 1024);
 const RULES_SCHEMA = loadSchema(RULES_SCHEMA_PATH);
 
 const MIME_TYPES = {
@@ -302,6 +303,32 @@ function describeJobStatus(status) {
   return parts.join("，");
 }
 
+function createTailBuffer(maxBytes) {
+  const limit = Math.max(0, Number(maxBytes) || 0);
+  let buffer = Buffer.alloc(0);
+  let totalBytes = 0;
+  return {
+    append(chunk) {
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      totalBytes += buf.length;
+      if (limit === 0) return;
+      buffer = buffer.length === 0 ? buf : Buffer.concat([buffer, buf]);
+      if (buffer.length > limit) {
+        buffer = buffer.subarray(buffer.length - limit);
+      }
+    },
+    toString() {
+      return buffer.toString("utf8");
+    },
+    get totalBytes() {
+      return totalBytes;
+    },
+    get truncated() {
+      return totalBytes > buffer.length;
+    }
+  };
+}
+
 function runPowerShell(args, cwd, options = {}) {
   return new Promise((resolve, reject) => {
     const executable = getPowerShellExecutable();
@@ -310,8 +337,15 @@ function runPowerShell(args, cwd, options = {}) {
       cwd,
       windowsHide: true
     });
-    let stdout = "";
-    let stderr = "";
+
+    const logPath = options.logPath || null;
+    const stdoutPart = logPath ? `${logPath}.stdout.part` : null;
+    const stderrPart = logPath ? `${logPath}.stderr.part` : null;
+    const stdoutSink = stdoutPart ? fs.createWriteStream(stdoutPart) : null;
+    const stderrSink = stderrPart ? fs.createWriteStream(stderrPart) : null;
+    const stdoutTail = createTailBuffer(PROCESS_LOG_TAIL_BYTES);
+    const stderrTail = createTailBuffer(PROCESS_LOG_TAIL_BYTES);
+
     let timedOut = false;
     const timeoutMs = options.timeoutMs || JOB_TIMEOUT_MS;
     const timer = setTimeout(() => {
@@ -319,18 +353,27 @@ function runPowerShell(args, cwd, options = {}) {
       cleanupTimedOutWordJob(child.pid, options);
       setTimeout(() => cleanupTimedOutWordJob(null, options), 3000).unref?.();
     }, timeoutMs);
+
     child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString("utf8");
+      stdoutTail.append(chunk);
+      if (stdoutSink) stdoutSink.write(chunk);
     });
     child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString("utf8");
+      stderrTail.append(chunk);
+      if (stderrSink) stderrSink.write(chunk);
     });
     child.on("error", (error) => {
       clearTimeout(timer);
+      if (stdoutSink) stdoutSink.end();
+      if (stderrSink) stderrSink.end();
       reject(error);
     });
     child.on("close", async (code) => {
       clearTimeout(timer);
+      await Promise.all([
+        stdoutSink ? new Promise((r) => stdoutSink.end(r)) : Promise.resolve(),
+        stderrSink ? new Promise((r) => stderrSink.end(r)) : Promise.resolve()
+      ]);
       const status = await readJsonIfExists(options.statusPath);
       const diagnostics = {
         startedAt: startedAt.toISOString(),
@@ -338,50 +381,80 @@ function runPowerShell(args, cwd, options = {}) {
         exitCode: code,
         timedOut,
         timeoutMs,
-        status
+        status,
+        stdoutBytes: stdoutTail.totalBytes,
+        stderrBytes: stderrTail.totalBytes
       };
-      await writeProcessLog(options.logPath, stdout, stderr, diagnostics);
+      await assembleProcessLog(logPath, stdoutPart, stderrPart, diagnostics);
+      const stdoutTailText = stdoutTail.toString();
+      const stderrTailText = stderrTail.toString();
       if (timedOut) {
         await cleanupTimedOutWordJob(null, options);
         const statusDetail = describeJobStatus(status);
         const suffix = statusDetail ? `。${statusDetail}` : "";
         const error = new Error(`处理超时，已终止本次 Word 任务（${Math.round(timeoutMs / 1000)} 秒）${suffix}`);
-        error.stdout = stdout;
-        error.stderr = stderr;
+        error.stdout = stdoutTailText;
+        error.stderr = stderrTailText;
         error.status = status;
         error.diagnostics = diagnostics;
         reject(error);
         return;
       }
       if (code !== 0) {
-        const error = new Error(stderr || stdout || `PowerShell 退出码 ${code}`);
-        error.stdout = stdout;
-        error.stderr = stderr;
+        const error = new Error(stderrTailText || stdoutTailText || `PowerShell 退出码 ${code}`);
+        error.stdout = stdoutTailText;
+        error.stderr = stderrTailText;
         error.status = status;
         error.diagnostics = diagnostics;
         reject(error);
         return;
       }
-      resolve({ stdout, stderr });
+      resolve({ stdout: stdoutTailText, stderr: stderrTailText });
     });
   });
 }
 
-async function writeProcessLog(logPath, stdout, stderr, diagnostics = null) {
+async function assembleProcessLog(logPath, stdoutPart, stderrPart, diagnostics) {
   if (!logPath) return;
-  const sections = [
-    `[diagnostics]`,
-    diagnostics ? JSON.stringify(diagnostics, null, 2) : "",
-    `[stdout]`,
-    stdout || "",
-    `[stderr]`,
-    stderr || ""
-  ];
-  const text = sections.join("\n");
   try {
-    await fsp.writeFile(logPath, text, "utf8");
+    const handle = await fsp.open(logPath, "w");
+    try {
+      const head = `[diagnostics]\n${diagnostics ? JSON.stringify(diagnostics, null, 2) : ""}\n[stdout]\n`;
+      await handle.write(head);
+      if (stdoutPart) await appendFileToHandle(handle, stdoutPart);
+      await handle.write("\n[stderr]\n");
+      if (stderrPart) await appendFileToHandle(handle, stderrPart);
+    } finally {
+      await handle.close();
+    }
   } catch {
     // Logging should not mask the real processing result.
+  } finally {
+    await Promise.allSettled([
+      stdoutPart ? fsp.unlink(stdoutPart) : Promise.resolve(),
+      stderrPart ? fsp.unlink(stderrPart) : Promise.resolve()
+    ]);
+  }
+}
+
+async function appendFileToHandle(handle, sourcePath) {
+  let source;
+  try {
+    source = await fsp.open(sourcePath, "r");
+  } catch {
+    return;
+  }
+  try {
+    const buf = Buffer.alloc(64 * 1024);
+    let position = 0;
+    while (true) {
+      const { bytesRead } = await source.read(buf, 0, buf.length, position);
+      if (!bytesRead) break;
+      await handle.write(buf, 0, bytesRead);
+      position += bytesRead;
+    }
+  } finally {
+    await source.close();
   }
 }
 
