@@ -108,6 +108,11 @@ test("脚本读取的规则路径都存在于 Schema", () => {
   const scriptFiles = [
     "scripts/redhead.ps1",
     "scripts/modules/Redhead.Core.ps1",
+    "scripts/modules/Redhead.Title.ps1",
+    "scripts/modules/Redhead.RedHeader.ps1",
+    "scripts/modules/Redhead.Signature.ps1",
+    "scripts/modules/Redhead.Imprint.ps1",
+    "scripts/modules/Redhead.Validation.ps1",
     "scripts/modules/Redhead.Runner.ps1"
   ].filter((file) => fs.existsSync(path.join(ROOT, file)));
   const rulePaths = new Set();
@@ -143,7 +148,7 @@ test("规则执行矩阵覆盖全部业务规则项", () => {
 
 test("规则执行矩阵引用的应用和校验都存在", () => {
   const coverage = readJson("data/rule-coverage.json");
-  const coreText = readText("scripts/modules/Redhead.Core.ps1");
+  const validationText = readText("scripts/modules/Redhead.Validation.ps1");
   const testText = readText("tests/run-tests.js");
   const fileCache = new Map();
   const readProjectFile = (relativePath) => {
@@ -162,7 +167,7 @@ test("规则执行矩阵引用的应用和校验都存在", () => {
       if (item.type === "document-check") {
         const needle = item.label || item.labelIncludes;
         assert(needle, `${entry.id} 的 document-check 缺少 label/labelIncludes`);
-        assert(coreText.includes(needle), `${entry.id} 引用的文档校验不存在：${needle}`);
+        assert(validationText.includes(needle), `${entry.id} 引用的文档校验不存在：${needle}`);
       } else if (item.type === "unit-test") {
         assert(item.name && testText.includes(`test("${item.name}"`), `${entry.id} 引用的单元测试不存在：${item.name}`);
       } else if (item.type === "code-path") {
@@ -251,6 +256,11 @@ test("PowerShell 脚本语法通过", () => {
   const files = [
     "scripts/redhead.ps1",
     "scripts/modules/Redhead.Core.ps1",
+    "scripts/modules/Redhead.Title.ps1",
+    "scripts/modules/Redhead.RedHeader.ps1",
+    "scripts/modules/Redhead.Signature.ps1",
+    "scripts/modules/Redhead.Imprint.ps1",
+    "scripts/modules/Redhead.Validation.ps1",
     "scripts/modules/Redhead.Runner.ps1"
   ].filter((file) => fs.existsSync(path.join(ROOT, file)));
   const checks = files.map((file) => {

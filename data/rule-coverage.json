@@ -43,7 +43,7 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Insert-RedHeader" }
+        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Insert-RedHeader" }
       ],
       "verification": [
         { "type": "document-check", "label": "红头文字已插入" },
@@ -62,8 +62,8 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Insert-RedHeader" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Adjust-RedHeaderLayout" }
+        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Insert-RedHeader" },
+        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Adjust-RedHeaderLayout" }
       ],
       "verification": [
         { "type": "document-check", "label": "发文机关标志上边缘距版心上边缘35mm" },
@@ -79,7 +79,7 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Insert-RedHeader" }
+        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Insert-RedHeader" }
       ],
       "verification": [
         { "type": "document-check", "label": "发文字号和签发人已插入" },
@@ -98,7 +98,7 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Insert-RedHeader" }
+        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Insert-RedHeader" }
       ],
       "verification": [
         { "type": "document-check", "label": "发文字号左空一字" },
@@ -120,9 +120,9 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Add-DocumentNoRedLine" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Adjust-DocumentNoRedLinePosition" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Adjust-TitlePositionAfterRedLine" }
+        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Add-DocumentNoRedLine" },
+        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Adjust-DocumentNoRedLinePosition" },
+        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Adjust-TitlePositionAfterRedLine" }
       ],
       "verification": [
         { "type": "document-check", "label": "红线已设置" },
@@ -138,9 +138,9 @@
       "paths": ["title.*"],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Normalize-TitleBlock" },
+        { "file": "scripts/modules/Redhead.Title.ps1", "symbol": "Normalize-TitleBlock" },
         { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Set-TitleParagraph" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Adjust-TitlePositionAfterRedLine" }
+        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Adjust-TitlePositionAfterRedLine" }
       ],
       "verification": [
         { "type": "document-check", "label": "标题编排于红色分隔线下空二行" },
@@ -155,7 +155,7 @@
       "risk": "high",
       "applies": [
         { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Set-BodyParagraph" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Apply-BodyAndTitleStyle" }
+        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Apply-BodyAndTitleStyle" }
       ],
       "verification": [
         { "type": "document-check", "label": "正文基础字体字号行距颜色符合规范" },
@@ -169,7 +169,7 @@
       "risk": "high",
       "applies": [
         { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Set-MainRecipientParagraph" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Apply-BodyAndTitleStyle" }
+        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Apply-BodyAndTitleStyle" }
       ],
       "verification": [
         { "type": "document-check", "label": "主送机关标题下空一行且顶格" },
@@ -207,7 +207,7 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Apply-Signature" }
+        { "file": "scripts/modules/Redhead.Signature.ps1", "symbol": "Apply-Signature" }
       ],
       "verification": [
         { "type": "document-check", "label": "落款单位和成文日期唯一" },
@@ -223,7 +223,7 @@
       "paths": ["signature.seal.*"],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Add-SealIfConfigured" }
+        { "file": "scripts/modules/Redhead.Signature.ps1", "symbol": "Add-SealIfConfigured" }
       ],
       "verification": [
         { "type": "document-check", "label": "真实公章图片已配置" },
@@ -240,8 +240,8 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Add-Imprint" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Align-ImprintTableToContentBottom" }
+        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Add-Imprint" },
+        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Align-ImprintTableToContentBottom" }
       ],
       "verification": [
         { "type": "document-check", "label": "总页数与正文/版记结构一致" },
@@ -260,7 +260,7 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Set-ImprintIssueCell" }
+        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Set-ImprintIssueCell" }
       ],
       "verification": [
         { "type": "document-check", "label": "印发机关左空一字" },
@@ -282,9 +282,9 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Set-ImprintIssueCell" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Set-ImprintElementCell" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Add-ImprintTable" }
+        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Set-ImprintIssueCell" },
+        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Set-ImprintElementCell" },
+        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Add-ImprintTable" }
       ],
       "verification": [
         { "type": "document-check", "label": "版记文字上下居中且间距一致" },
@@ -302,7 +302,7 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Add-ImprintTable" }
+        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Add-ImprintTable" }
       ],
       "verification": [
         { "type": "document-check", "label": "版记要素之间使用中间细分隔线" },
@@ -319,8 +319,8 @@
       ],
       "risk": "medium",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Get-ImprintRows" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Set-ImprintElementCell" }
+        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Get-ImprintRows" },
+        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Set-ImprintElementCell" }
       ],
       "verification": [
         { "type": "document-check", "label": "版记要素行数符合规则" },
