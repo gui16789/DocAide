@@ -463,3 +463,50 @@ function Adjust-TitlePositionAfterRedLine {
     $titleParagraph.Range.ParagraphFormat.SpaceBefore = [single]([Math]::Max(0, $currentSpaceBefore + $delta))
   }
 }
+
+function Remove-ExistingRedHead {
+  param($Document, $Rules)
+
+  $headerText = ([string](Get-RuleValue $Rules "redHeader.text" "")).Trim() -replace "\s", ""
+  $limit = [Math]::Min($Document.Paragraphs.Count, 8)
+  $matchedIndexes = @()
+
+  for ($i = 1; $i -le $limit; $i++) {
+    $text = Get-ParagraphText $Document.Paragraphs.Item($i)
+    $compact = $text -replace "\s", ""
+    if ([string]::IsNullOrWhiteSpace($compact)) { continue }
+    $isHeader = ($headerText -ne "") -and $compact.Contains($headerText)
+    $isDocNo = $compact -match "〔\d{4}〕\d+号"
+    if ($isHeader -or $isDocNo) { $matchedIndexes += $i }
+  }
+  if ($matchedIndexes.Count -eq 0) { return 0 }
+
+  # 版头块 = 首段到最后一个命中段；其中的命中段与空白段一并删除
+  $maxMatched = [int]($matchedIndexes | Measure-Object -Maximum).Maximum
+  $deleteIndexes = @()
+  for ($i = 1; $i -le $maxMatched; $i++) {
+    $paragraph = $Document.Paragraphs.Item($i)
+    if (($matchedIndexes -contains $i) -or (Test-BlankParagraph $paragraph)) {
+      $deleteIndexes += $i
+    }
+  }
+
+  # 删除锚定在版头块内的形状（旧版头红线、装饰图形）
+  for ($s = $Document.Shapes.Count; $s -ge 1; $s--) {
+    $shape = $Document.Shapes.Item($s)
+    $anchorStart = $null
+    try { $anchorStart = [int]$shape.Anchor.Start } catch { continue }
+    foreach ($i in $deleteIndexes) {
+      $range = $Document.Paragraphs.Item($i).Range
+      if (($anchorStart -ge [int]$range.Start) -and ($anchorStart -lt [int]$range.End)) {
+        $shape.Delete()
+        break
+      }
+    }
+  }
+
+  for ($i = $deleteIndexes.Count - 1; $i -ge 0; $i--) {
+    $Document.Paragraphs.Item([int]$deleteIndexes[$i]).Range.Delete() | Out-Null
+  }
+  return $deleteIndexes.Count
+}

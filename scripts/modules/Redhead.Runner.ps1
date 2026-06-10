@@ -59,6 +59,11 @@ try {
     $null = $find.Execute("安安盟", $false, $true, $false, $false, $false, $true, 1, $false, "安盟", 2)
   }
 
+  if ([bool](Get-RuleValue $rules "cleanup.removeExistingRedHead" $true)) {
+    Write-JobStatus "redhead-dedup" "正在清理源文已有版头"
+    $null = Remove-ExistingRedHead $doc $rules
+  }
+
   $titleOverride = Get-RuleValue $meta "titleOverride" ""
   if ([bool](Get-RuleValue $meta "replaceTitle" $false)) {
     Write-JobStatus "title-replacing" "正在按处理参数覆盖标题"

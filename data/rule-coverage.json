@@ -5,29 +5,54 @@
     {
       "id": "rule-metadata",
       "title": "规则版本信息",
-      "paths": ["version"],
+      "paths": [
+        "version"
+      ],
       "risk": "low",
       "applies": [
-        { "file": "server.js", "symbol": "stampRules" },
-        { "file": "server.js", "symbol": "saveRules" }
+        {
+          "file": "server.js",
+          "symbol": "stampRules"
+        },
+        {
+          "file": "server.js",
+          "symbol": "saveRules"
+        }
       ],
       "verification": [
-        { "type": "unit-test", "name": "规则 JSON 能解析并符合 Schema" }
+        {
+          "type": "unit-test",
+          "name": "规则 JSON 能解析并符合 Schema"
+        }
       ],
       "notes": "用于规则版本展示和历史记录，不直接影响 Word 版式。"
     },
     {
       "id": "page-setup",
       "title": "页面尺寸和版心",
-      "paths": ["page.*"],
+      "paths": [
+        "page.*"
+      ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Get-PageSizeSpec" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Apply-PageSetup" }
+        {
+          "file": "scripts/modules/Redhead.Core.ps1",
+          "symbol": "Get-PageSizeSpec"
+        },
+        {
+          "file": "scripts/modules/Redhead.Core.ps1",
+          "symbol": "Apply-PageSetup"
+        }
       ],
       "verification": [
-        { "type": "document-check", "labelIncludes": "页面尺寸" },
-        { "type": "document-check", "label": "页边距符合规则" }
+        {
+          "type": "document-check",
+          "labelIncludes": "页面尺寸"
+        },
+        {
+          "type": "document-check",
+          "label": "页边距符合规则"
+        }
       ]
     },
     {
@@ -43,11 +68,20 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Insert-RedHeader" }
+        {
+          "file": "scripts/modules/Redhead.RedHeader.ps1",
+          "symbol": "Insert-RedHeader"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "红头文字已插入" },
-        { "type": "document-check", "label": "红头字号、缩放、颜色符合规则" }
+        {
+          "type": "document-check",
+          "label": "红头文字已插入"
+        },
+        {
+          "type": "document-check",
+          "label": "红头字号、缩放、颜色符合规则"
+        }
       ]
     },
     {
@@ -62,12 +96,24 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Insert-RedHeader" },
-        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Adjust-RedHeaderLayout" }
+        {
+          "file": "scripts/modules/Redhead.RedHeader.ps1",
+          "symbol": "Insert-RedHeader"
+        },
+        {
+          "file": "scripts/modules/Redhead.RedHeader.ps1",
+          "symbol": "Adjust-RedHeaderLayout"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "发文机关标志上边缘距版心上边缘35mm" },
-        { "type": "document-check", "label": "发文字号位于发文机关标志下空二行" }
+        {
+          "type": "document-check",
+          "label": "发文机关标志上边缘距版心上边缘35mm"
+        },
+        {
+          "type": "document-check",
+          "label": "发文字号位于发文机关标志下空二行"
+        }
       ]
     },
     {
@@ -79,11 +125,20 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Insert-RedHeader" }
+        {
+          "file": "scripts/modules/Redhead.RedHeader.ps1",
+          "symbol": "Insert-RedHeader"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "发文字号和签发人已插入" },
-        { "type": "document-check", "label": "发文字号格式符合规范" }
+        {
+          "type": "document-check",
+          "label": "发文字号和签发人已插入"
+        },
+        {
+          "type": "document-check",
+          "label": "发文字号格式符合规范"
+        }
       ]
     },
     {
@@ -98,13 +153,28 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Insert-RedHeader" }
+        {
+          "file": "scripts/modules/Redhead.RedHeader.ps1",
+          "symbol": "Insert-RedHeader"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "发文字号左空一字" },
-        { "type": "document-check", "label": "发文字号字体字号符合规范" },
-        { "type": "document-check", "label": "签发人右空一字" },
-        { "type": "document-check", "label": "签发人字体字号符合规范" }
+        {
+          "type": "document-check",
+          "label": "发文字号左空一字"
+        },
+        {
+          "type": "document-check",
+          "label": "发文字号字体字号符合规范"
+        },
+        {
+          "type": "document-check",
+          "label": "签发人右空一字"
+        },
+        {
+          "type": "document-check",
+          "label": "签发人字体字号符合规范"
+        }
       ]
     },
     {
@@ -120,77 +190,172 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Add-DocumentNoRedLine" },
-        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Adjust-DocumentNoRedLinePosition" },
-        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Adjust-TitlePositionAfterRedLine" }
+        {
+          "file": "scripts/modules/Redhead.RedHeader.ps1",
+          "symbol": "Add-DocumentNoRedLine"
+        },
+        {
+          "file": "scripts/modules/Redhead.RedHeader.ps1",
+          "symbol": "Adjust-DocumentNoRedLinePosition"
+        },
+        {
+          "file": "scripts/modules/Redhead.RedHeader.ps1",
+          "symbol": "Adjust-TitlePositionAfterRedLine"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "红线已设置" },
-        { "type": "document-check", "label": "版头红线颜色线宽符合规则" },
-        { "type": "document-check", "label": "版头红线浮动位置符合标准模板" },
-        { "type": "document-check", "label": "版头红线居中且与版心等宽" },
-        { "type": "document-check", "label": "标题编排于红色分隔线下空二行" }
+        {
+          "type": "document-check",
+          "label": "红线已设置"
+        },
+        {
+          "type": "document-check",
+          "label": "版头红线颜色线宽符合规则"
+        },
+        {
+          "type": "document-check",
+          "label": "版头红线浮动位置符合标准模板"
+        },
+        {
+          "type": "document-check",
+          "label": "版头红线居中且与版心等宽"
+        },
+        {
+          "type": "document-check",
+          "label": "标题编排于红色分隔线下空二行"
+        }
       ]
     },
     {
       "id": "title",
       "title": "标题格式和分行",
-      "paths": ["title.*"],
+      "paths": [
+        "title.*"
+      ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Title.ps1", "symbol": "Normalize-TitleBlock" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Set-TitleParagraph" },
-        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Adjust-TitlePositionAfterRedLine" }
+        {
+          "file": "scripts/modules/Redhead.Title.ps1",
+          "symbol": "Normalize-TitleBlock"
+        },
+        {
+          "file": "scripts/modules/Redhead.Core.ps1",
+          "symbol": "Set-TitleParagraph"
+        },
+        {
+          "file": "scripts/modules/Redhead.RedHeader.ps1",
+          "symbol": "Adjust-TitlePositionAfterRedLine"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "标题编排于红色分隔线下空二行" },
-        { "type": "document-check", "label": "标题字体字号颜色行距居中符合规范" },
-        { "type": "document-check", "label": "标题已按词义主动分行" }
+        {
+          "type": "document-check",
+          "label": "标题编排于红色分隔线下空二行"
+        },
+        {
+          "type": "document-check",
+          "label": "标题字体字号颜色行距居中符合规范"
+        },
+        {
+          "type": "document-check",
+          "label": "标题已按词义主动分行"
+        }
       ]
     },
     {
       "id": "body",
       "title": "正文基础格式",
-      "paths": ["body.*"],
+      "paths": [
+        "body.*"
+      ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Set-BodyParagraph" },
-        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Apply-BodyAndTitleStyle" }
+        {
+          "file": "scripts/modules/Redhead.Core.ps1",
+          "symbol": "Set-BodyParagraph"
+        },
+        {
+          "file": "scripts/modules/Redhead.RedHeader.ps1",
+          "symbol": "Apply-BodyAndTitleStyle"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "正文基础字体字号行距颜色符合规范" },
-        { "type": "document-check", "label": "正文自然段左空二字回行顶格" }
+        {
+          "type": "document-check",
+          "label": "正文基础字体字号行距颜色符合规范"
+        },
+        {
+          "type": "document-check",
+          "label": "正文自然段左空二字回行顶格"
+        }
       ]
     },
     {
       "id": "main-recipient",
       "title": "主送机关",
-      "paths": ["mainRecipient.*"],
+      "paths": [
+        "mainRecipient.*"
+      ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Set-MainRecipientParagraph" },
-        { "file": "scripts/modules/Redhead.RedHeader.ps1", "symbol": "Apply-BodyAndTitleStyle" }
+        {
+          "file": "scripts/modules/Redhead.Core.ps1",
+          "symbol": "Set-MainRecipientParagraph"
+        },
+        {
+          "file": "scripts/modules/Redhead.RedHeader.ps1",
+          "symbol": "Apply-BodyAndTitleStyle"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "主送机关标题下空一行且顶格" },
-        { "type": "document-check", "label": "主送机关使用全角冒号" },
-        { "type": "document-check", "label": "主送机关字体字号行距符合规范" }
+        {
+          "type": "document-check",
+          "label": "主送机关标题下空一行且顶格"
+        },
+        {
+          "type": "document-check",
+          "label": "主送机关使用全角冒号"
+        },
+        {
+          "type": "document-check",
+          "label": "主送机关字体字号行距符合规范"
+        }
       ]
     },
     {
       "id": "attachment",
       "title": "附件说明",
-      "paths": ["attachment.*"],
+      "paths": [
+        "attachment.*"
+      ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Apply-AttachmentExplanationStyle" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Set-AttachmentExplanationParagraph" }
+        {
+          "file": "scripts/modules/Redhead.Core.ps1",
+          "symbol": "Apply-AttachmentExplanationStyle"
+        },
+        {
+          "file": "scripts/modules/Redhead.Core.ps1",
+          "symbol": "Set-AttachmentExplanationParagraph"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "附件说明正文下空一行左空二字" },
-        { "type": "document-check", "label": "附件说明字体字号行距符合规范" },
-        { "type": "document-check", "label": "附件说明回行对齐附件名称首字" },
-        { "type": "document-check", "label": "多个附件序号左对齐" }
+        {
+          "type": "document-check",
+          "label": "附件说明正文下空一行左空二字"
+        },
+        {
+          "type": "document-check",
+          "label": "附件说明字体字号行距符合规范"
+        },
+        {
+          "type": "document-check",
+          "label": "附件说明回行对齐附件名称首字"
+        },
+        {
+          "type": "document-check",
+          "label": "多个附件序号左对齐"
+        }
       ]
     },
     {
@@ -207,27 +372,53 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Signature.ps1", "symbol": "Apply-Signature" }
+        {
+          "file": "scripts/modules/Redhead.Signature.ps1",
+          "symbol": "Apply-Signature"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "落款单位和成文日期唯一" },
-        { "type": "document-check", "label": "盖章公文模式已启用" },
-        { "type": "document-check", "label": "成文日期右空四字编排" },
-        { "type": "document-check", "label": "发文机关署名以成文日期为准居中" }
+        {
+          "type": "document-check",
+          "label": "落款单位和成文日期唯一"
+        },
+        {
+          "type": "document-check",
+          "label": "盖章公文模式已启用"
+        },
+        {
+          "type": "document-check",
+          "label": "成文日期右空四字编排"
+        },
+        {
+          "type": "document-check",
+          "label": "发文机关署名以成文日期为准居中"
+        }
       ],
       "notes": "company/date 可被表单 meta 覆盖；规则值作为默认值和校验基准。"
     },
     {
       "id": "signature-seal",
       "title": "公章图片",
-      "paths": ["signature.seal.*"],
+      "paths": [
+        "signature.seal.*"
+      ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Signature.ps1", "symbol": "Add-SealIfConfigured" }
+        {
+          "file": "scripts/modules/Redhead.Signature.ps1",
+          "symbol": "Add-SealIfConfigured"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "真实公章图片已配置" },
-        { "type": "document-check", "label": "公章已插入文档" }
+        {
+          "type": "document-check",
+          "label": "真实公章图片已配置"
+        },
+        {
+          "type": "document-check",
+          "label": "公章已插入文档"
+        }
       ]
     },
     {
@@ -240,13 +431,28 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Add-Imprint" },
-        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Align-ImprintTableToContentBottom" }
+        {
+          "file": "scripts/modules/Redhead.Imprint.ps1",
+          "symbol": "Add-Imprint"
+        },
+        {
+          "file": "scripts/modules/Redhead.Imprint.ps1",
+          "symbol": "Align-ImprintTableToContentBottom"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "总页数与正文/版记结构一致" },
-        { "type": "document-check", "label": "版记位于偶数页" },
-        { "type": "document-check", "label": "版记末条分隔线与版心下边缘重合" }
+        {
+          "type": "document-check",
+          "label": "总页数与正文/版记结构一致"
+        },
+        {
+          "type": "document-check",
+          "label": "版记位于偶数页"
+        },
+        {
+          "type": "document-check",
+          "label": "版记末条分隔线与版心下边缘重合"
+        }
       ]
     },
     {
@@ -260,12 +466,24 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Set-ImprintIssueCell" }
+        {
+          "file": "scripts/modules/Redhead.Imprint.ps1",
+          "symbol": "Set-ImprintIssueCell"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "印发机关左空一字" },
-        { "type": "document-check", "label": "印发日期右空一字" },
-        { "type": "document-check", "label": "印发机关和印发日期排在末线上方一行" }
+        {
+          "type": "document-check",
+          "label": "印发机关左空一字"
+        },
+        {
+          "type": "document-check",
+          "label": "印发日期右空一字"
+        },
+        {
+          "type": "document-check",
+          "label": "印发机关和印发日期排在末线上方一行"
+        }
       ]
     },
     {
@@ -282,15 +500,36 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Set-ImprintIssueCell" },
-        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Set-ImprintElementCell" },
-        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Add-ImprintTable" }
+        {
+          "file": "scripts/modules/Redhead.Imprint.ps1",
+          "symbol": "Set-ImprintIssueCell"
+        },
+        {
+          "file": "scripts/modules/Redhead.Imprint.ps1",
+          "symbol": "Set-ImprintElementCell"
+        },
+        {
+          "file": "scripts/modules/Redhead.Imprint.ps1",
+          "symbol": "Add-ImprintTable"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "版记文字上下居中且间距一致" },
-        { "type": "document-check", "label": "版记字体字号固定行距符合规则" },
-        { "type": "document-check", "label": "版记文字基线补偿符合规则" },
-        { "type": "document-check", "label": "印发机关和印发日期排在末线上方一行" }
+        {
+          "type": "document-check",
+          "label": "版记文字上下居中且间距一致"
+        },
+        {
+          "type": "document-check",
+          "label": "版记字体字号固定行距符合规则"
+        },
+        {
+          "type": "document-check",
+          "label": "版记文字基线补偿符合规则"
+        },
+        {
+          "type": "document-check",
+          "label": "印发机关和印发日期排在末线上方一行"
+        }
       ]
     },
     {
@@ -302,12 +541,24 @@
       ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Add-ImprintTable" }
+        {
+          "file": "scripts/modules/Redhead.Imprint.ps1",
+          "symbol": "Add-ImprintTable"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "版记要素之间使用中间细分隔线" },
-        { "type": "document-check", "label": "版记首末粗分隔线线宽符合规则" },
-        { "type": "document-check", "label": "版记末条分隔线与版心下边缘重合" }
+        {
+          "type": "document-check",
+          "label": "版记要素之间使用中间细分隔线"
+        },
+        {
+          "type": "document-check",
+          "label": "版记首末粗分隔线线宽符合规则"
+        },
+        {
+          "type": "document-check",
+          "label": "版记末条分隔线与版心下边缘重合"
+        }
       ]
     },
     {
@@ -319,53 +570,144 @@
       ],
       "risk": "medium",
       "applies": [
-        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Get-ImprintRows" },
-        { "file": "scripts/modules/Redhead.Imprint.ps1", "symbol": "Set-ImprintElementCell" }
+        {
+          "file": "scripts/modules/Redhead.Imprint.ps1",
+          "symbol": "Get-ImprintRows"
+        },
+        {
+          "file": "scripts/modules/Redhead.Imprint.ps1",
+          "symbol": "Set-ImprintElementCell"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "版记要素行数符合规则" },
-        { "type": "document-check", "labelIncludes": "已编入版记且格式符合规范" },
-        { "type": "document-check", "label": "版记要素之间使用中间细分隔线" }
+        {
+          "type": "document-check",
+          "label": "版记要素行数符合规则"
+        },
+        {
+          "type": "document-check",
+          "labelIncludes": "已编入版记且格式符合规范"
+        },
+        {
+          "type": "document-check",
+          "label": "版记要素之间使用中间细分隔线"
+        }
       ]
     },
     {
       "id": "page-number",
       "title": "页码",
-      "paths": ["pageNumber.*"],
+      "paths": [
+        "pageNumber.*"
+      ],
       "risk": "high",
       "applies": [
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Apply-BodyPageNumbers" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Add-PageFieldFooter" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Apply-PageSetup" }
+        {
+          "file": "scripts/modules/Redhead.Core.ps1",
+          "symbol": "Apply-BodyPageNumbers"
+        },
+        {
+          "file": "scripts/modules/Redhead.Core.ps1",
+          "symbol": "Add-PageFieldFooter"
+        },
+        {
+          "file": "scripts/modules/Redhead.Core.ps1",
+          "symbol": "Apply-PageSetup"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "正文页脚已设置页码字段" },
-        { "type": "document-check", "label": "页码字体字号形式符合规范" },
-        { "type": "document-check", "label": "页码位于版心下边缘下方规则距离" },
-        { "type": "document-check", "label": "页码单双页按规则对齐并空字" },
-        { "type": "document-check", "label": "空白页不编页码" },
-        { "type": "document-check", "label": "空白页后的版记页不编页码" },
-        { "type": "document-check", "label": "版记页按正文连续编页码" },
-        { "type": "document-check", "label": "页码规则已关闭" }
+        {
+          "type": "document-check",
+          "label": "正文页脚已设置页码字段"
+        },
+        {
+          "type": "document-check",
+          "label": "页码字体字号形式符合规范"
+        },
+        {
+          "type": "document-check",
+          "label": "页码位于版心下边缘下方规则距离"
+        },
+        {
+          "type": "document-check",
+          "label": "页码单双页按规则对齐并空字"
+        },
+        {
+          "type": "document-check",
+          "label": "空白页不编页码"
+        },
+        {
+          "type": "document-check",
+          "label": "空白页后的版记页不编页码"
+        },
+        {
+          "type": "document-check",
+          "label": "版记页按正文连续编页码"
+        },
+        {
+          "type": "document-check",
+          "label": "页码规则已关闭"
+        }
       ]
     },
     {
       "id": "cleanup",
       "title": "源文清理和输入转换",
-      "paths": ["cleanup.*"],
+      "paths": [
+        "cleanup.*"
+      ],
       "risk": "medium",
       "applies": [
-        { "file": "scripts/modules/Redhead.Runner.ps1", "symbol": "cleanup.convertDocToDocx" },
-        { "file": "scripts/modules/Redhead.Runner.ps1", "symbol": "cleanup.removeExistingHeadersFooters" },
-        { "file": "scripts/modules/Redhead.Runner.ps1", "symbol": "cleanup.fixDoubleAnmeng" },
-        { "file": "scripts/modules/Redhead.Core.ps1", "symbol": "Trim-TrailingBlankContent" }
+        {
+          "file": "scripts/modules/Redhead.Runner.ps1",
+          "symbol": "cleanup.convertDocToDocx"
+        },
+        {
+          "file": "scripts/modules/Redhead.Runner.ps1",
+          "symbol": "cleanup.removeExistingHeadersFooters"
+        },
+        {
+          "file": "scripts/modules/Redhead.Runner.ps1",
+          "symbol": "cleanup.fixDoubleAnmeng"
+        },
+        {
+          "file": "scripts/modules/Redhead.Runner.ps1",
+          "symbol": "cleanup.removeExistingRedHead"
+        },
+        {
+          "file": "scripts/modules/Redhead.Core.ps1",
+          "symbol": "Trim-TrailingBlankContent"
+        }
       ],
       "verification": [
-        { "type": "document-check", "label": "源文件尾部空白页已处理" },
-        { "type": "unit-test", "name": "可选 Word COM 回归" },
-        { "type": "code-path", "file": "scripts/modules/Redhead.Runner.ps1", "text": "cleanup.convertDocToDocx" },
-        { "type": "code-path", "file": "scripts/modules/Redhead.Runner.ps1", "text": "cleanup.removeExistingHeadersFooters" },
-        { "type": "code-path", "file": "scripts/modules/Redhead.Runner.ps1", "text": "cleanup.fixDoubleAnmeng" }
+        {
+          "type": "document-check",
+          "label": "源文件尾部空白页已处理"
+        },
+        {
+          "type": "unit-test",
+          "name": "可选 Word COM 回归"
+        },
+        {
+          "type": "code-path",
+          "file": "scripts/modules/Redhead.Runner.ps1",
+          "text": "cleanup.convertDocToDocx"
+        },
+        {
+          "type": "code-path",
+          "file": "scripts/modules/Redhead.Runner.ps1",
+          "text": "cleanup.removeExistingHeadersFooters"
+        },
+        {
+          "type": "code-path",
+          "file": "scripts/modules/Redhead.Runner.ps1",
+          "text": "cleanup.fixDoubleAnmeng"
+        },
+        {
+          "type": "code-path",
+          "file": "scripts/modules/Redhead.Runner.ps1",
+          "text": "cleanup.removeExistingRedHead"
+        }
       ],
       "notes": "输入转换和页眉页脚清理由流程代码执行；尾部空白页有文档级校验。"
     }

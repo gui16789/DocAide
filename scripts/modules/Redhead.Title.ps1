@@ -73,9 +73,11 @@ function Get-TitleProtectedTerms {
 }
 
 function Test-TitleBreakInsideProtectedTerm {
-  param([string]$Text, [int]$Position)
+  param([string]$Text, [int]$Position, [int]$IgnoreLongerThan = 0)
   if ($Position -le 0 -or $Position -ge $Text.Length) { return $false }
   foreach ($term in (Get-TitleProtectedTerms $Text)) {
+    # 禁拆词本身超过单行上限时必须在词内断行，不再视为违规
+    if ($IgnoreLongerThan -gt 0 -and $term.Length -gt $IgnoreLongerThan) { continue }
     foreach ($match in [regex]::Matches($Text, [regex]::Escape($term))) {
       $start = $match.Index
       $end = $match.Index + $match.Length
@@ -150,10 +152,10 @@ function Split-TitleText {
         if ($segmentLength -le 0) { continue }
         $score = [double]$state["Score"] + [Math]::Pow($segmentLength - $target, 2)
         if ($segmentLength -lt 6 -and $line -lt $lineCount) { $score += 100 }
-        if ($segmentLength -gt ($MaxLineChars + 4)) { $score += 120 }
+        if ($segmentLength -gt $MaxLineChars) { $score += 5000 + 200 * ($segmentLength - $MaxLineChars) }
         if (-not $semanticSet.Contains($point) -and $point -ne $title.Length) { $score += 140 }
-        if (Test-TitleBreakInsideProtectedTerm $title $point) { $score += 400 }
-        if (Test-TitleBreakHasBadEdge $title $point) { $score += 180 }
+        if (Test-TitleBreakInsideProtectedTerm $title $point $MaxLineChars) { $score += 4000 }
+        if (Test-TitleBreakHasBadEdge $title $point) { $score += 2500 }
         $segment = $title.Substring($last, $segmentLength)
         if ($segment.EndsWith("的") -or $segment.EndsWith("对") -or $segment.EndsWith("关于")) { $score += 50 }
         if ($line -gt 1 -and ("的对和与及、，）)".Contains([string]$segment[0]))) { $score += 50 }

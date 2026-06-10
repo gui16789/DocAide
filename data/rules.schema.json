@@ -703,7 +703,8 @@
         "fixDoubleAnmeng",
         "convertDocToDocx",
         "removeExistingHeadersFooters",
-        "trimTrailingBlankPages"
+        "trimTrailingBlankPages",
+        "removeExistingRedHead"
       ],
       "properties": {
         "fixDoubleAnmeng": {
@@ -716,6 +717,9 @@
           "type": "boolean"
         },
         "trimTrailingBlankPages": {
+          "type": "boolean"
+        },
+        "removeExistingRedHead": {
           "type": "boolean"
         }
       }

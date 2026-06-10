@@ -2,7 +2,7 @@
 
 本文件由 `node scripts/generate-rule-coverage-doc.js` 根据 `data/rule-coverage.json` 生成。
 
-- 当前业务规则叶子项：102
+- 当前业务规则叶子项：103
 - 覆盖条目：20
 - 未覆盖规则：0
 - 未匹配规则模式：0
@@ -30,7 +30,7 @@
 | 版记分隔线 | high | imprint.outerLineWidthPt<br>imprint.innerLineWidthPt | Add-ImprintTable (scripts/modules/Redhead.Imprint.ps1) | 版记要素之间使用中间细分隔线<br>版记首末粗分隔线线宽符合规则<br>版记末条分隔线与版心下边缘重合 |  |
 | 版记主送和抄送扩展行 | medium | imprint.mainRecipient.*<br>imprint.cc.* | Get-ImprintRows (scripts/modules/Redhead.Imprint.ps1)<br>Set-ImprintElementCell (scripts/modules/Redhead.Imprint.ps1) | 版记要素行数符合规则<br>包含：已编入版记且格式符合规范<br>版记要素之间使用中间细分隔线 |  |
 | 页码 | high | pageNumber.* | Apply-BodyPageNumbers (scripts/modules/Redhead.Core.ps1)<br>Add-PageFieldFooter (scripts/modules/Redhead.Core.ps1)<br>Apply-PageSetup (scripts/modules/Redhead.Core.ps1) | 正文页脚已设置页码字段<br>页码字体字号形式符合规范<br>页码位于版心下边缘下方规则距离<br>页码单双页按规则对齐并空字<br>空白页不编页码<br>空白页后的版记页不编页码<br>版记页按正文连续编页码<br>页码规则已关闭 |  |
-| 源文清理和输入转换 | medium | cleanup.* | cleanup.convertDocToDocx (scripts/modules/Redhead.Runner.ps1)<br>cleanup.removeExistingHeadersFooters (scripts/modules/Redhead.Runner.ps1)<br>cleanup.fixDoubleAnmeng (scripts/modules/Redhead.Runner.ps1)<br>Trim-TrailingBlankContent (scripts/modules/Redhead.Core.ps1) | 源文件尾部空白页已处理<br>测试：可选 Word COM 回归<br>代码路径：cleanup.convertDocToDocx<br>代码路径：cleanup.removeExistingHeadersFooters<br>代码路径：cleanup.fixDoubleAnmeng | 输入转换和页眉页脚清理由流程代码执行；尾部空白页有文档级校验。 |
+| 源文清理和输入转换 | medium | cleanup.* | cleanup.convertDocToDocx (scripts/modules/Redhead.Runner.ps1)<br>cleanup.removeExistingHeadersFooters (scripts/modules/Redhead.Runner.ps1)<br>cleanup.fixDoubleAnmeng (scripts/modules/Redhead.Runner.ps1)<br>cleanup.removeExistingRedHead (scripts/modules/Redhead.Runner.ps1)<br>Trim-TrailingBlankContent (scripts/modules/Redhead.Core.ps1) | 源文件尾部空白页已处理<br>测试：可选 Word COM 回归<br>代码路径：cleanup.convertDocToDocx<br>代码路径：cleanup.removeExistingHeadersFooters<br>代码路径：cleanup.fixDoubleAnmeng<br>代码路径：cleanup.removeExistingRedHead | 输入转换和页眉页脚清理由流程代码执行；尾部空白页有文档级校验。 |
 
 ## 规则展开
 
@@ -50,6 +50,7 @@
 | cleanup.convertDocToDocx | 源文清理和输入转换 | medium |
 | cleanup.fixDoubleAnmeng | 源文清理和输入转换 | medium |
 | cleanup.removeExistingHeadersFooters | 源文清理和输入转换 | medium |
+| cleanup.removeExistingRedHead | 源文清理和输入转换 | medium |
 | cleanup.trimTrailingBlankPages | 源文清理和输入转换 | medium |
 | documentNo.defaultText | 发文字号和签发人内容 | high |
 | documentNo.font | 发文字号和签发人格式 | high |

@@ -159,7 +159,7 @@ function Build-ValidationChecks {
     for ($j = 0; $j -lt ($actualTitleLines.Count - 1); $j++) {
       $position += (Normalize-TitleText $actualTitleLines[$j]).Length
       $breakPositions += $position
-      if ((Test-TitleBreakInsideProtectedTerm $normalizedTitle $position) -or (Test-TitleBreakHasBadEdge $normalizedTitle $position)) {
+      if ((Test-TitleBreakInsideProtectedTerm $normalizedTitle $position $maxLineChars) -or (Test-TitleBreakHasBadEdge $normalizedTitle $position)) {
         $breaksSemanticOk = $false
       }
     }
