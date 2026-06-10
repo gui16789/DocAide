@@ -18,6 +18,7 @@ const RULES_PATH = path.join(DATA_DIR, "rules.json");
 const RULES_HISTORY_PATH = path.join(DATA_DIR, "rules-history.json");
 const RULES_SCHEMA_PATH = path.join(DATA_DIR, "rules.schema.json");
 const JOB_TIMEOUT_MS = Number(process.env.REDHEAD_JOB_TIMEOUT_MS || 300000);
+const MAX_UPLOAD_BYTES = Number(process.env.REDHEAD_MAX_UPLOAD_BYTES || 50 * 1024 * 1024);
 const CLEANUP_ON_START = process.env.REDHEAD_CLEANUP_ON_START !== "0";
 const CLEANUP_AFTER_JOB = process.env.REDHEAD_CLEANUP_AFTER_JOB !== "0";
 const PROCESS_LOG_TAIL_BYTES = Number(process.env.REDHEAD_LOG_TAIL_BYTES || 64 * 1024);
@@ -38,6 +39,20 @@ const MIME_TYPES = {
 let queue = Promise.resolve();
 const activeJobIds = new Set();
 
+// 规则文件读-改-写互斥锁，防止并发保存/回滚相互覆盖。
+let rulesLock = Promise.resolve();
+function withRulesLock(task) {
+  const run = rulesLock.then(task, task);
+  rulesLock = run.catch(() => {});
+  return run;
+}
+
+async function writeFileAtomic(filePath, data) {
+  const tmpPath = `${filePath}.${crypto.randomBytes(4).toString("hex")}.tmp`;
+  await fsp.writeFile(tmpPath, data, "utf8");
+  await fsp.rename(tmpPath, filePath);
+}
+
 function getPort() {
   const index = process.argv.indexOf("--port");
   if (index >= 0 && process.argv[index + 1]) return Number(process.argv[index + 1]);
@@ -47,7 +62,8 @@ function getPort() {
 function getHost() {
   const index = process.argv.indexOf("--host");
   if (index >= 0 && process.argv[index + 1]) return process.argv[index + 1];
-  return process.env.HOST || "0.0.0.0";
+  // 服务无鉴权，默认只监听本机；局域网共享需显式 --host 0.0.0.0。
+  return process.env.HOST || "127.0.0.1";
 }
 
 async function ensureDirs() {
@@ -98,14 +114,23 @@ function sendText(res, status, text) {
   res.end(text);
 }
 
-function readRequestBody(req, maxBytes = 200 * 1024 * 1024) {
+function readRequestBody(req, maxBytes = MAX_UPLOAD_BYTES) {
   return new Promise((resolve, reject) => {
+    const limitText = `${Math.round(maxBytes / 1024 / 1024)}MB`;
+    const declared = Number(req.headers["content-length"]);
+    if (Number.isFinite(declared) && declared > maxBytes) {
+      // 尚未接收 body，不 destroy，让上层正常返回 413 JSON。
+      const error = new Error(`请求体超过 ${limitText} 限制`);
+      error.statusCode = 413;
+      reject(error);
+      return;
+    }
     const chunks = [];
     let size = 0;
     req.on("data", (chunk) => {
       size += chunk.length;
       if (size > maxBytes) {
-        reject(new Error("上传文件超过 200MB 限制"));
+        reject(new Error(`请求体超过 ${limitText} 限制`));
         req.destroy();
         return;
       }
@@ -196,11 +221,13 @@ function normalizeRulesPayload(payload) {
 }
 
 async function saveRules(payload) {
-  const rules = stampRules(normalizeRulesPayload(payload), "手动保存");
-  assertValidRules(rules, RULES_SCHEMA, "保存规则");
-  await fsp.writeFile(RULES_PATH, `${JSON.stringify(rules, null, 2)}\n`, "utf8");
-  await appendRuleHistory(rules, "手动保存");
-  return rules;
+  return withRulesLock(async () => {
+    const rules = stampRules(normalizeRulesPayload(payload), "手动保存");
+    assertValidRules(rules, RULES_SCHEMA, "保存规则");
+    await writeFileAtomic(RULES_PATH, `${JSON.stringify(rules, null, 2)}\n`);
+    await appendRuleHistory(rules, "手动保存");
+    return rules;
+  });
 }
 
 function stampRules(payload, note = "") {
@@ -235,20 +262,22 @@ async function loadRuleHistory() {
 async function appendRuleHistory(rules, note) {
   const history = await loadRuleHistory();
   history.unshift(toRuleHistoryEntry(rules, note));
-  await fsp.writeFile(RULES_HISTORY_PATH, `${JSON.stringify(history.slice(0, 50), null, 2)}\n`, "utf8");
+  await writeFileAtomic(RULES_HISTORY_PATH, `${JSON.stringify(history.slice(0, 50), null, 2)}\n`);
 }
 
 async function restoreRuleVersion(id) {
-  const history = await loadRuleHistory();
-  const entry = history.find((item) => item.id === id);
-  if (!entry) throw new Error("未找到规则版本");
-  const restored = stampRules(normalizeRulesPayload(entry.rules), `回滚自 ${entry.id}`);
-  restored.ruleId = entry.rules.ruleId || restored.ruleId;
-  restored.restoredFrom = entry.id;
-  assertValidRules(restored, RULES_SCHEMA, "回滚规则");
-  await fsp.writeFile(RULES_PATH, `${JSON.stringify(restored, null, 2)}\n`, "utf8");
-  await appendRuleHistory(restored, `回滚自 ${entry.id}`);
-  return restored;
+  return withRulesLock(async () => {
+    const history = await loadRuleHistory();
+    const entry = history.find((item) => item.id === id);
+    if (!entry) throw new Error("未找到规则版本");
+    const restored = stampRules(normalizeRulesPayload(entry.rules), `回滚自 ${entry.id}`);
+    restored.ruleId = entry.rules.ruleId || restored.ruleId;
+    restored.restoredFrom = entry.id;
+    assertValidRules(restored, RULES_SCHEMA, "回滚规则");
+    await writeFileAtomic(RULES_PATH, `${JSON.stringify(restored, null, 2)}\n`);
+    await appendRuleHistory(restored, `回滚自 ${entry.id}`);
+    return restored;
+  });
 }
 
 function enqueue(task) {
@@ -586,6 +615,7 @@ async function processDocument(body, contentType, onJobId) {
   });
 
   const result = JSON.parse(await fsp.readFile(resultPath, "utf8"));
+  result.ok = true;
   result.jobId = jobId;
   result.originalName = upload.filename;
   result.rule = {
@@ -608,10 +638,16 @@ async function processDocument(body, contentType, onJobId) {
   }
 }
 
+function isInsideDir(baseDir, targetPath) {
+  const base = path.resolve(baseDir);
+  const resolved = path.resolve(targetPath);
+  return resolved === base || resolved.startsWith(base + path.sep);
+}
+
 async function serveStatic(req, res, pathname) {
   const filePath = pathname === "/" ? path.join(PUBLIC_DIR, "index.html") : path.join(PUBLIC_DIR, pathname);
   const resolved = path.resolve(filePath);
-  if (!resolved.startsWith(path.resolve(PUBLIC_DIR))) {
+  if (!isInsideDir(PUBLIC_DIR, resolved)) {
     sendText(res, 403, "Forbidden");
     return;
   }
@@ -629,9 +665,10 @@ async function serveStatic(req, res, pathname) {
 }
 
 async function streamJobEvents(req, res, jobId) {
-  const safeJobId = sanitizeFileName(decodeURIComponent(jobId));
+  // pathname 在 handle 入口已统一解码，这里不再二次 decode。
+  const safeJobId = sanitizeFileName(jobId);
   const jobDir = path.resolve(OUTPUT_DIR, safeJobId);
-  if (!jobDir.startsWith(path.resolve(OUTPUT_DIR))) {
+  if (!isInsideDir(OUTPUT_DIR, jobDir)) {
     sendText(res, 403, "Forbidden");
     return;
   }
@@ -708,10 +745,10 @@ async function serveJobFile(req, res, pathname) {
     sendText(res, 404, "Not found");
     return;
   }
-  const jobId = sanitizeFileName(decodeURIComponent(match[1]));
-  const fileName = sanitizeFileName(decodeURIComponent(match[2]));
+  const jobId = sanitizeFileName(match[1]);
+  const fileName = sanitizeFileName(match[2]);
   const filePath = path.resolve(OUTPUT_DIR, jobId, fileName);
-  if (!filePath.startsWith(path.resolve(OUTPUT_DIR))) {
+  if (!isInsideDir(OUTPUT_DIR, filePath)) {
     sendText(res, 403, "Forbidden");
     return;
   }
@@ -731,8 +768,15 @@ async function serveJobFile(req, res, pathname) {
 }
 
 async function handle(req, res) {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const pathname = decodeURIComponent(url.pathname);
+  let url;
+  let pathname;
+  try {
+    url = new URL(req.url, `http://${req.headers.host}`);
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    sendText(res, 400, "Bad request");
+    return;
+  }
 
   try {
     if (req.method === "GET" && pathname === "/api/rules") {
@@ -797,7 +841,7 @@ async function handle(req, res) {
     if (req.method === "GET" && pathname.startsWith("/api/jobs/") && pathname.endsWith("/events")) {
       const match = pathname.match(/^\/api\/jobs\/([^/]+)\/events$/);
       if (match) {
-        await streamJobEvents(req, res, sanitizeFileName(decodeURIComponent(match[1])));
+        await streamJobEvents(req, res, match[1]);
         return;
       }
     }
@@ -814,7 +858,9 @@ async function handle(req, res) {
 
     sendText(res, 405, "Method not allowed");
   } catch (error) {
+    // /api/process 可能已 flushHeaders（状态码锁定 200），错误统一靠 ok:false + error 字段识别。
     sendJson(res, error.statusCode || 500, {
+      ok: false,
       error: error.message,
       details: error.details || error.stderr || error.stdout || undefined,
       jobId: error.jobId || undefined,

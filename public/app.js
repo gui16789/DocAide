@@ -45,7 +45,6 @@ function fillRuleInputs() {
   });
 
   $("#documentNo").value = getByPath(state.rules, "documentNo.defaultText") || "";
-  $("#signer").value = "阮江";
   $("#company").value = getByPath(state.rules, "signature.company") || "";
   $("#date").value = getByPath(state.rules, "signature.date") || "";
   $("#ruleStamp").textContent = formatStamp(state.rules);

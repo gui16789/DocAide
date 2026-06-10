@@ -12,10 +12,10 @@ node server.js --port 3721
 然后打开：
 
 ```text
-http://0.0.0.0:3721
+http://127.0.0.1:3721
 ```
 
-服务默认监听 `0.0.0.0`，也可以用 `--host 127.0.0.1` 或环境变量 `HOST` 覆盖。
+服务默认只监听本机 `127.0.0.1`（服务无鉴权）。如需局域网访问，用 `--host 0.0.0.0` 或环境变量 `HOST` 显式开启。
 
 ## 运行要求
 
@@ -102,11 +102,18 @@ npm run test:word
 
 ## 脚本结构
 
-PowerShell 处理脚本已拆为入口和模块：
+PowerShell 处理脚本已拆为入口和按职责划分的模块：
 
-- `scripts/redhead.ps1`：稳定入口，保留服务端调用参数，加载模块。
-- `scripts/modules/Redhead.Core.ps1`：规则读取、Word COM 工具、版式处理、校验函数。
+- `scripts/redhead.ps1`：稳定入口，保留服务端调用参数，按顺序 dot-source 全部模块。
+- `scripts/modules/Redhead.Core.ps1`：规则读取、Word COM/进程工具、通用排版与文本辅助、页面与版心设置、正文/主送/附件样式、尾部空白清理、页码。
+- `scripts/modules/Redhead.Title.ps1`：标题规范化与按词义分行。
+- `scripts/modules/Redhead.RedHeader.ps1`：发文机关标志、发文字号、签发人、版头红线及其位置校正。
+- `scripts/modules/Redhead.Signature.ps1`：落款署名、成文日期编排和公章插入。
+- `scripts/modules/Redhead.Imprint.ps1`：版记表格生成、分页位置和版心底部对齐。
+- `scripts/modules/Redhead.Validation.ps1`：生成后的套红格式校验项。
 - `scripts/modules/Redhead.Runner.ps1`：任务执行主流程和阶段状态写入。
+
+模块通过 dot-source 共享同一作用域，函数可跨模块互相调用，加载顺序不影响调用关系。
 
 ## 任务诊断
 
